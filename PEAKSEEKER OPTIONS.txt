@@ -1,0 +1,67 @@
+directory	C:\Python27\Raw Data\130221_polii_50uMam.txt
+Automatic	1	#1 is Automatic, 0 is Manual Mode, with peak displaying and user approval.
+PeakDispTime	1	# Manual Mode: the time that the tallest peak options are displayed. Don't set to 0.
+ChargeDispTime	1	# Manual Mode: the time that the charge state options are displayed. Don't set to 0.
+Window_max	None	#the maximum m/z of the spectrum that you want. None is just the max
+Window_min	None	#the minimum m/z of the spectrum that you want. None is just the min.
+max_mass	1000000	#Maximum mass allowed.
+min_mass	1	#Minimum mass allowed.
+max_charge	100	#Maximum charge state allowed.
+min_charge	50	#Minimum charge state allowed.
+
+--*PROCESSING OPTIONS*--
+
+BkgrdRemove	0	#1 is do background removal, 0 is don't.
+bkgrd_rmve_win	50	#Size of half of the background remove window. Background is defined as the minimum within this window. 
+bkgrd_smth_win	100	#Size of half of the window that smooths the background via moving average.
+DoSmooth	0	#DO NOT USE. 1 is Smooth with moving average, 0 is none
+smooth_window	3	#DO NOT USE. Size of half of the window that smooths the spectrum via moving average.
+DoSavitzky	0	#1 is Smooth with Savitzky-Golay, 0 is None
+savitz_window	3	#Size of half of the Savitzky window
+savitz_order	4	#Order of polynomial to be used
+savitz_times	40	#Number of times to resmooth using the Savitzky-Golay filter.
+UseProcessed	0	#If 1, perform deconvolution on the processed spectrum, not the original spectrum.
+
+--*PEAK DETECTION OPTIONS*--
+
+PeakFindWay	i	#Options: i=intensity threshold+local max, c=continuous wavelet transform with ridge lines, m=Massign peak detection
+Threshold	0.20	# Fraction of the the highest peak's intensity. Used in intensity threshold  and Massign peak detection PeakFindWay.
+JustPeaks	0	#Only want peak detection display, enter 1, else 0.
+FindOverlaps	1	# 1 means use 2nd Derivative to find peaks as local minima and fit multiple Gaussians correspondingly. 0 means No
+DerivThresh	0.3	#for FindOverlaps. A local minimum is only a peak if it is less than DerivThresh * median of negative 2nd Derivatives in range
+NeedCrossing	1	#for FindOverlaps. If 1, local minima only count as peaks if they are separated by a zero-crossing.
+m_adj_factor	0.7	# PeakFindWay: 'm'. After hitting peak above threshold, the threshold becomes that peak's height times the adjustment factor.
+c_widths	1-6,0.5	# PeakFindWay: 'c'. Range of expected FWHMs of peaks of interest, and the interval of the widths to be searched
+c_wavelet	None	# PeakFindWay: 'c'. None is the ricker wavelet. For other wavelets, see scipy.signal.find_peaks_cwt documentation.
+c_max_dist	None	# PeakFindWay: 'c'. Peaks across adjacent rows are only connected if within max_dist from each other. None is widths/4.  
+c_gap_thresh	None	# PeakFindWay: 'c'. Number of rows a ridge line can go without being connected before being considered discontinued. None is 2.
+c_min_length	4	# PeakFindWay: 'c'. Minimum length a ridge line must be to be acceptable. None is 1/4 the number of widths.
+c_min_snr	1	# PeakFindWay: 'c'. Minimum SNR ratio. Signal is value of cwt matrix at shortest length scale. None is 1.
+c_noise_perc	10	# PeakFindWay: 'c'. Percentile of data points below which is considered noise. None is 10.
+
+--*CHARGE STATE ASSIGNMENT OPTIONS*--
+
+MassTolerance	5	#A simulated peak must be within MassTolerance of a real peak's centroid to be considered within it.
+ScoreLimit	50000	#If a simulation exceeds this limit in score (i.e. the weighted sum of mass, height, and stddev erro), it is not considered.
+MassErrWeight	50000	# In the scoring function, MassErrWeight is the weight of the m/z % error. It is so big because m/z >>> |m/z0-m/z1|
+HeightErrWeight	500	# In the scoring function, HeightErrWeight is the weight of height % error.
+WidthErrWeight	0	#NOT RECOMMENDED TO USE. In the scoring function, WidthErrWeight is the weight of width % error.
+AttemptLim	5	# This is how many charge states it will test, and calculate the scoring function for each. AT MOST 6.
+RuntimeErrLim	3	# Maximum number of charge envelopes it'll try to fit before giving up.
+min_peak_num	3	# Minimum number of peaks to a simulated charge envelope. AT LEAST 3, since you can't fit Gaussians to 2 or less points.
+MaxSimulations	5	#The number of masses it will find, maximum. AT MOST 5.
+RepeatSearch	0	#If 1, subtract all the simulations and peaks already found, and repeat deconvolution once.
+UseSubtract	0	#DO NOT USE. If 1, refit the envelope after subtracting all the other ones out, to account for peak overlap, as in Massign.
+SubtractAuto	0	#DO NOT USE. Same as Automatic, but with UseSubtract.
+NumberRefit	1	#DO NOT USE. How many times you refit using the Subtract.
+StdDev1stGuess	1.1774	#this will be the starting guess of the standard deviation of the charge envelope
+
+--*SAVING SUBTRACTED SPECTRUM*--
+
+SaveSubtract	0	#If 1, save subtracted spectrum as text file under same directory as original.
+NegToZeros	0	#if saving subtracted file, turn all negative values into just 0s.
+SubtractName	subtract	#this will be appended to the end of the subtracted file name
+
+--*SAVING MASS INFORMATION*--
+SaveMasses	0	#If 1, save mass, abundance, and peak info as text file under same directory as original.
+MassName	masses	#this will be appended to the end of the masses file name
