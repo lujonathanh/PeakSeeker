@@ -7,7 +7,7 @@ Window_min	None	#the minimum m/z of the spectrum that you want. None is just the
 max_mass	1000000	#Maximum mass allowed.
 min_mass	1	#Minimum mass allowed.
 max_charge	100	#Maximum charge state allowed.
-min_charge	50	#Minimum charge state allowed.
+min_charge	1	#Minimum charge state allowed.
 
 --*PROCESSING OPTIONS*--
 
