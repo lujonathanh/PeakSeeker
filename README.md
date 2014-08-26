@@ -11,15 +11,15 @@ The details of the algorithm will be available in an upcoming paper.
 
 Installation
 ------------
-*You must have Python 2.7, scipy, numpy, and matplotlib installed. The Enthought Canopy environment has all of these.
+* You must have Python 2.7, scipy, numpy, and matplotlib installed. The Enthought Canopy environment has all of these.
 
-*Download and save both PeakSeeker.py and PEAKSEEKER OPTIONS.txt
+* Download and save both PeakSeeker.py and PEAKSEEKER OPTIONS.txt
 
-*In order to use the program, you must specify the directory path of PEAKSEEKER OPTIONS.txt in the program code. Control+f "opener = open('C:\Python27\PEAKSEEKER OPTIONS.txt')" This is around line 1353.
+* In order to use the program, you must specify the directory path of PEAKSEEKER OPTIONS.txt in the program code. Control+f "opener = open('C:\Python27\PEAKSEEKER OPTIONS.txt')" This is around line 1353.
 
-*Similarly, PEAKSEEKER OPTIONS.txt must specify, in the first line, the directory path of a text file with the mass spectra (i.e. copy-pasted from XCalibur) 
+* Similarly, PEAKSEEKER OPTIONS.txt must specify, in the first line, the directory path of a text file with the mass spectra (i.e. copy-pasted from XCalibur) 
 
-*Do NOT remove the header lines of the text file. The program will remove these automatically.
+* Do NOT remove the header lines of the text file. The program will remove these automatically.
 
 
 The program isn't working! What do I do?
@@ -28,4 +28,5 @@ See Strategies for Using PeakSeeker.txt
 
 To-Do List
 ----------
-*Add a capability for simulating envelopes based on user's input parameters.
+* Add a capability for simulating envelopes based on user's input parameters.
+* Document and clean up code.
