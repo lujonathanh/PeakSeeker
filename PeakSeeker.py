@@ -19,6 +19,8 @@ from scipy.optimize import curve_fit
 from scipy.optimize import leastsq
 from scipy import stats
 from scipy import signal
+import matplotlib
+matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
 from math import factorial
 import operator
@@ -474,6 +476,7 @@ class Envelope:
                     ax.legend(handles[::-1], labels[::-1], loc = 'best')
                     figManager = plt.get_current_fig_manager()
                     figManager.window.showMaximized()
+                    figManager.window.raise_()
                     plt.show()
                     plt.pause(ChargeDisplayTime)
                     while 1:
@@ -554,6 +557,7 @@ def Max_Unsimulated_Index(Peak): #returns the index of the maximum value not sim
             plt.legend(loc = 'best')
             figManager = plt.get_current_fig_manager()
             figManager.window.showMaximized()
+            figManager.window.raise_()
             plt.show()
             plt.pause(PeakDisplayTime)
             while 1:
@@ -1350,7 +1354,7 @@ def main():
     
     global StdDevStartGuess
     
-    opener = open('C:\Python27\PEAKSEEKER OPTIONS.txt') #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
+    opener = open('/Users/jlu96/Desktop/Python27/PEAKSEEKER OPTIONS.txt') #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
     index = 0
     for line in opener:
         value = line.partition('\t')[2].partition('\t')[0]
@@ -1615,7 +1619,7 @@ def main():
     #PEAK SETUP*****************************************************************
     if PeakDetectionType == 'i' or PeakDetectionType == 'c':
         PeakSetup(Peak,mz) #sorts as well
-        print "Number of Peaks found is", PeakNumber
+        print "Number of Peaks initially found is", PeakNumber
     
     t_peak = time.time()
     
@@ -1659,7 +1663,7 @@ def main():
                     if k>=len(newmz):
                         break; #THIS PIECE OF CODE REMOVES THE PEAKS FROM CONSIDERATION IF NOTHING IS FOUND
                     if newmz[k] == []:
-                        print "Empty peak removed from consideration." #THIS PIECE OF CODE REMOVES THE PEAKS FROM CONSIDERATION IF NOTHING IS FOUND
+                        #print "Empty peak removed from consideration." #THIS PIECE OF CODE REMOVES THE PEAKS FROM CONSIDERATION IF NOTHING IS FOUND
                         newmz.remove([])
                         newintensity.remove([])
                         newindices.remove([])
@@ -1756,13 +1760,14 @@ def main():
                 Peak[i].PeakFit(False, 0)
                 inputs, outputs = Peak[i].PeakPlot()
                 plt.plot(inputs, outputs/max(intensityarray), 'c')
-                plt.plot(Peak[i].fit_center, Peak[i].fit_height/max(intensityarray), 'ro')
+                plt.plot(Peak[i].fit_center, Peak[i].fit_height/max(intensityarray), 'r.')
             plt.xlabel('m/z')
             plt.ylabel('Relative Intensity')
             ax.yaxis.set_minor_locator(MultipleLocator(0.25))
             plt.locator_params(axis = 'y', tight = True, nbins = 3)
             figManager = plt.get_current_fig_manager()
             figManager.window.showMaximized()
+            figManager.window.raise_()
             plt.show()
         
         else: #Just displays found peaks
@@ -1780,10 +1785,11 @@ def main():
             
             figManager = plt.get_current_fig_manager()
             figManager.window.showMaximized()
+            figManager.window.raise_()
             plt.show()
         
         t_plot = time.time()
-        print "Total time used: ", t_plot-t
+        print "\nTotal time used: ", t_plot-t
         print "Time to read in: ", t_read - t
         print "Time to process: ", t_process - t_read
         print "Time to detect peaks: ", t_peak - t_process
@@ -1792,6 +1798,7 @@ def main():
 
     else:
         #ENVELOPE SIMULATION SETUP**************************************************
+        TruePeakNumber = PeakNumber
         
         Simulation = range(20)
         for i in range(20):
@@ -1891,7 +1898,7 @@ def main():
         outputs = np.zeros(len(intensityarray))
         for i in range(SimulationNumber):
             outputs += Simulation[i].Function(mzarray)
-        
+        DiffSpec = intensityarray - outputs
         
         #FIX THE MAX AND MIN. ONLY REPORT RELATIVE ABUNDANCES.
         plt.figure()
@@ -1911,15 +1918,15 @@ def main():
         
         ax = plt.subplot(313)
         plt.title('Subtracted Spectrum')
-        plt.axis( [min(mzarray), max(mzarray), min(intensityarray)/max(intensityarray), 1.2])
-        plt.plot(mzarray, (intensityarray - outputs)/max(intensityarray), 'k')
+        plt.axis( [min(mzarray), max(mzarray), -0.2, 1.2])
+        plt.plot(mzarray, (DiffSpec)/max(intensityarray), 'k')
         plt.xlabel('m/z')
         ax.yaxis.set_minor_locator(MultipleLocator(0.25))
         plt.locator_params(axis = 'y', tight = True, nbins = 3)
         
         figManager = plt.get_current_fig_manager()
         figManager.window.showMaximized()
-        
+        figManager.window.raise_()
         plt.figure()
         
         for i in range(SimulationNumber):
@@ -1962,11 +1969,12 @@ def main():
         
         figManager = plt.get_current_fig_manager()
         figManager.window.showMaximized()        
-        
+        figManager.window.raise_()
         plt.show()
         
         t_plot = time.time()
         
+        print "FINAL RESULTS:\n"
         for i in range(SimulationNumber):
             print "Mass", i+1, "is", round(Simulation[i].mass), "and abundance is", round(Simulation[i].abundance)
             print "at m/z center", round(Simulation[i].center, 1)
@@ -1977,7 +1985,8 @@ def main():
             print "Height at this charge center: ", round(Simulation[i].curve_scale, 1)
             print "Full width at half maximum over charge domain is", round(Simulation[i].curve_std * 2*1.1774, 2)
             print "\n"
-
+        print "Total peaks detected:\t", TruePeakNumber        
+        
         AllPeaks = []
         for i in range(SimulationNumber):
             AllPeaks += Simulation[i].peak_mz #the index of AllPeaks should give the corresponding simulation number
@@ -1993,6 +2002,7 @@ def main():
         for i in range(len(Overlaps)):
             print "Peak at", round(Overlaps[i],1) , "is shared by masses ", [round(Simulation[k].mass) for k in OverlapPeakMassDict[Overlaps[i]]]
         
+        print "\n"
         
         if SaveSubtract:
             if NegToZeros:
@@ -2023,6 +2033,8 @@ def main():
                 file.write("Full width at half maximum of fitted envelope over charge domain:\t" + str(round(Simulation[i].curve_std * 2 * 1.1774, 2)))
                 file.write('\n')
                 file.write('\n')
+            file.write('Total Peaks Detected:\t' + str(TruePeakNumber))
+            file.write('\n')
             for i in range(len(Overlaps)):
                 file.write("Peak at " + str(round(Overlaps[i], 1)) + " is shared by masses " + str([round(Simulation[k].mass) for k in OverlapPeakMassDict[Overlaps[i]]]))
                 file.write('\n')
