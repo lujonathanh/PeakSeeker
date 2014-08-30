@@ -22,6 +22,7 @@ from scipy import signal
 import matplotlib
 matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
+plt.switch_backend('Qt4Agg')
 from math import factorial
 import operator
 from itertools import groupby
@@ -270,7 +271,6 @@ class Envelope:
         if len(self.peak_charges)<min_peak_number:
             return(False, ScoreLimit)
         
-        print "Possible charges before fitting", self.peak_charges
         peak_intensities = []
         for z in self.peak_charges:
             indiv_height = []
@@ -378,7 +378,7 @@ class Envelope:
         self.central_fit_height = Peak[self.central_peak_index].fit_height
         self.central_fit_std = Peak[self.central_peak_index].fit_std
         self.central_fit_mz = Peak[self.central_peak_index].fit_center
-        print "Considering the peak at ", self.center, ": \n"
+        print "Considering the peak at ", round(self.center), ": \n"
     
     def CompleteFit(self, Peak, UseDiff):
         global mzarray
@@ -401,11 +401,12 @@ class Envelope:
         while True:
             try:
                 charge_works, stddev = self.ChargeState(Peak, wrong_charges, UseDiff) #just use this stddev or refit?
-                print "possible charge is", self.charge
-                print "corresponding peak mzs are", self.peak_mz
+                print "\npossible charge is", self.charge
+                print "corresponding mass is", round(self.mass)
+                print "corresponding peak mzs are", [round(m, 1) for m in self.peak_mz]
                 print "corresponding peak charges are", self.peak_charges
-                print "score is", stddev
-                if self.peak_mz == [] or self.charge == 0:
+                print "score is", round(stddev, 4)
+		if self.peak_mz == [] or self.charge == 0:
                     print "Error: no more possible charges found."
                     break;
                 else:
@@ -444,9 +445,9 @@ class Envelope:
         print "\n"
             #error means doesn't converge when fitting to gaussian. go back and switch the charge state
         if Automatic:
-            print "for peak", self.center, "possible charges are", tried_charges
-            print "corresponding masses are", [(self.center -1.00794)* z for z in tried_charges]
-            print "corresponding scores are", scores
+            print "for peak", round(self.center), "possible charges are", tried_charges
+            print "corresponding masses are", [round((self.center -1.00794)* z) for z in tried_charges]
+            print "corresponding scores are", [round(m) for m in scores]
         if len(tried_charges) == 0:
             return False
         if sum(np.array(scores)>=ScoreLimit) >=len(scores): #checks if no correct charge states were found (all would be greater than/equal to ScoreLimit then)
@@ -459,9 +460,9 @@ class Envelope:
                 row = zip(*col)
                 sort_row = sorted(row, key = operator.itemgetter(1))
                 sort_col = list(zip(*sort_row))
-                print "for peak", self.center, "possible charges are", sort_col[0]
-                print "corresponding masses are", [(self.center -1.00794)* z for z in sort_col[0]]
-                print "list of scores is", sort_col[1]
+                print "for peak", round(self.center), "possible charges are", sort_col[0]
+                print "corresponding masses are", [round((self.center -1.00794)* z) for z in sort_col[0]]
+                print "list of scores is", [round(m, 4) for m in sort_col[1]]
                 while 1:
                     plt.figure()
                     ax = plt.subplot(1,1,1)
@@ -640,9 +641,6 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
     ysg_temp = []
     inside_peak= False
     
-    if min(mz) < 13240 and max(mz) >13240:
-        print "Second derivative is", ysg
-    
     for i in range(len(ysg)):
         if ysg[i]<0:
             if 0<i<len(ysg)-1:
@@ -679,10 +677,6 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
     
     res_use_half_left = use_half_left
     res_use_half_right = use_half_right
-    if min(mz) < 13240 and max(mz) >13240:
-        print "Use_half_left is", use_half_left, "Use_half_right is", use_half_right
-        print "minimum m/z is", min(mz), "maximum m/z is", max(mz)
-        print peakind
         
     if use_half_left:
         if 0 not in peakind:
@@ -702,9 +696,7 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
     else:
         half_gaussian_center_right = None
 
-    if min(mz) < 13240 and max(mz) >13240:
-        print peakind
-    
+
     b = range(len(mz))
     step1= mz[0]
     step2 = mz[len(mz)-1]
@@ -930,13 +922,7 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                 h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, sd6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14], plsq[0][15], plsq[0][16]
         except TypeError:
             pass
-        if min(mz) < 13240 and max(mz) >13240:
-            print "M/z is", mz
-            print "centroid guesses are", [mz[i] for i in peakind]
-            print "sdguess is", sd_guess
-            print "fitted centroids:", m1, m2, m3, m4, m5, m6
-            print "fitted heights:", h1, h2, h3, h4, h5, h6
-            print "Fitted stddevs:", sd1, sd2, sd3, sd4, sd5, sd6
+
         
         returnmz = [] #each element is a list of three elements: list of m/zs, list of intensities, list of indices. remove 0s at end.
         returnintensity = []
@@ -1354,7 +1340,7 @@ def main():
     
     global StdDevStartGuess
     
-    opener = open('/Users/jlu96/Desktop/Python27/PEAKSEEKER OPTIONS.txt') #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
+    opener = open('./OPTIONS.txt') #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
     index = 0
     for line in opener:
         value = line.partition('\t')[2].partition('\t')[0]
@@ -1893,164 +1879,164 @@ def main():
                 
         t_charge = time.time()          
                 
-        
-        #PLOTTING*******************************************************************
-        outputs = np.zeros(len(intensityarray))
-        for i in range(SimulationNumber):
-            outputs += Simulation[i].Function(mzarray)
-        DiffSpec = intensityarray - outputs
-        
-        #FIX THE MAX AND MIN. ONLY REPORT RELATIVE ABUNDANCES.
-        plt.figure()
-        ax = plt.subplot(311)
-        plt.title('Original Spectrum')
-        plt.axis( [min(mzarray), max(mzarray), min(intensityarray)/max(intensityarray), 1.2])
-        plt.plot(mzarray, intensityarray/max(intensityarray), 'k')
-        ax.yaxis.set_minor_locator(MultipleLocator(0.25))
-        plt.locator_params(axis = 'y', tight = True, nbins = 3)
-
-        ax = plt.subplot(312)
-        plt.title('Simulated Spectrum')
-        plt.axis( [min(mzarray), max(mzarray), min(intensityarray)/max(intensityarray), 1.2])
-        plt.plot(mzarray, outputs/max(intensityarray), 'b')
-        ax.yaxis.set_minor_locator(MultipleLocator(0.25))
-        plt.locator_params(axis = 'y', tight = True, nbins = 3)    
-        
-        ax = plt.subplot(313)
-        plt.title('Subtracted Spectrum')
-        plt.axis( [min(mzarray), max(mzarray), -0.2, 1.2])
-        plt.plot(mzarray, (DiffSpec)/max(intensityarray), 'k')
-        plt.xlabel('m/z')
-        ax.yaxis.set_minor_locator(MultipleLocator(0.25))
-        plt.locator_params(axis = 'y', tight = True, nbins = 3)
-        
-        figManager = plt.get_current_fig_manager()
-        figManager.window.showMaximized()
-        figManager.window.raise_()
-        plt.figure()
-        
-        for i in range(SimulationNumber):
-            ax = plt.subplot(SimulationNumber, 2, 2*(i+1) -1)
+        if SimulationNumber >=1:
+            #PLOTTING*******************************************************************
+            outputs = np.zeros(len(intensityarray))
+            for i in range(SimulationNumber):
+                outputs += Simulation[i].Function(mzarray)
+            DiffSpec = intensityarray - outputs
+            
+            #FIX THE MAX AND MIN. ONLY REPORT RELATIVE ABUNDANCES.
+            plt.figure()
+            ax = plt.subplot(311)
+            plt.title('Original Spectrum')
             plt.axis( [min(mzarray), max(mzarray), min(intensityarray)/max(intensityarray), 1.2])
+            plt.plot(mzarray, intensityarray/max(intensityarray), 'k')
             ax.yaxis.set_minor_locator(MultipleLocator(0.25))
             plt.locator_params(axis = 'y', tight = True, nbins = 3)
-            plt.plot(mzarray, intensityarray/max(intensityarray), 'k')
-            plt.plot(mzarray, Simulation[i].Function(mzarray)/max(intensityarray), color = ColorDict[i], label = LetterDict[i] + str(round(Simulation[i].mass)) )
-            for j in range(len(Simulation[i].peak_charges)):
-                plt.text(Simulation[i].mass/Simulation[i].peak_charges[j] + 1.00794, norm(Simulation[i].peak_charges[j], Simulation[i].curve_scale, Simulation[i].curve_center, Simulation[i].curve_std), LetterDict[i]  + str(Simulation[i].peak_charges[j]), ha = 'center', va = 'bottom')
-            plt.legend(loc = 'best', frameon = False)        
-        plt.xlabel('m/z')
-        
-        ax = plt.subplot(2, 2, 2)
-        x = np.linspace(min([Simulation[i].mass for i in range(SimulationNumber)])-20000, max([Simulation[i].mass for i in range(SimulationNumber)]) + 20000, 1000)
-        mass_intensity = np.zeros(len(x))
-        for i in range(SimulationNumber):
-            mass_intensity += norm(x, Simulation[i].abundance, Simulation[i].mass, Simulation[i].central_fit_std * Simulation[i].charge)
-        plt.plot(x, mass_intensity/max(mass_intensity))
-        for i in range(SimulationNumber):
-            plt.text(Simulation[i].mass, Simulation[i].abundance/max([Simulation[j].abundance for j in range(SimulationNumber)]), LetterDict[i]  + str(round(Simulation[i].mass)))
-        plt.title("Deconvolved masses")
-        plt.xlabel('Mass')
-        plt.ylabel('Relative Abundance')
-        plt.axis([min(x), max(x), min(intensityarray)/max(intensityarray), 1.1])
-        ax.yaxis.set_minor_locator(MultipleLocator(0.25))
-        plt.locator_params(axis = 'x', tight = True, nbins = 7)
-        plt.locator_params(axis = 'y', tight = True, nbins = 3)
-        
-        
-        ax = plt.subplot(2,2,4)
-        plt.axis( [min(mzarray), max(mzarray), 0, 1.2])
-        plt.plot(mzarray, intensityarray/max(intensityarray), 'k', label = "Raw")
-        plt.plot(mzarray, outputs/max(intensityarray), 'b', label = "Fitted")
-        plt.xlabel('m/z')
-        plt.legend(loc = 'best', frameon = False)
-        ax.yaxis.set_minor_locator(MultipleLocator(0.25))
-        plt.locator_params(axis = 'y', tight = True, nbins = 3)
-        
-        figManager = plt.get_current_fig_manager()
-        figManager.window.showMaximized()        
-        figManager.window.raise_()
-        plt.show()
-        
-        t_plot = time.time()
-        
-        print "FINAL RESULTS:\n"
-        for i in range(SimulationNumber):
-            print "Mass", i+1, "is", round(Simulation[i].mass), "and abundance is", round(Simulation[i].abundance)
-            print "at m/z center", round(Simulation[i].center, 1)
-            print "for peaks", [round(Simulation[i].peak_mz[j], 1) for j in range(len(Simulation[i].peak_mz))] 
-            print "at charges", Simulation[i].peak_charges
-            print "Full width at half maximum of mass peak is", round(Simulation[i].central_fit_std * Simulation[i].charge * 2 * 1.1774, 2)
-            print "Charge center of simulation: ", round(Simulation[i].curve_center, 2)
-            print "Height at this charge center: ", round(Simulation[i].curve_scale, 1)
-            print "Full width at half maximum over charge domain is", round(Simulation[i].curve_std * 2*1.1774, 2)
-            print "\n"
-        print "Total peaks detected:\t", TruePeakNumber        
-        
-        AllPeaks = []
-        for i in range(SimulationNumber):
-            AllPeaks += Simulation[i].peak_mz #the index of AllPeaks should give the corresponding simulation number
-        
-        Overlaps = [o for o in set(AllPeaks) if AllPeaks.count(o) > 1]
-        OverlapPeakMassDict = {Overlaps[i]: [] for i in range(len(Overlaps))}
-        
-        for i in range(SimulationNumber):
-            for j in range(len(Overlaps)):
-                if Overlaps[j] in Simulation[i].peak_mz:
-                    OverlapPeakMassDict[Overlaps[j]].append(i)
-        
-        for i in range(len(Overlaps)):
-            print "Peak at", round(Overlaps[i],1) , "is shared by masses ", [round(Simulation[k].mass) for k in OverlapPeakMassDict[Overlaps[i]]]
-        
-        print "\n"
-        
-        if SaveSubtract:
-            if NegToZeros:
-                for i in range(len(DiffSpec)):
-                    if DiffSpec[i] <0:
-                        DiffSpec[i] = 0.0
-            MakeFile(name, SubtractName, beginning, mzarray, DiffSpec)
-        
-
-        if SaveMasses:
-            mass_path = name.partition('.txt')[0] + '_' + MassName + '.txt'
-            file = open(mass_path, 'w')
+    
+            ax = plt.subplot(312)
+            plt.title('Simulated Spectrum')
+            plt.axis( [min(mzarray), max(mzarray), min(intensityarray)/max(intensityarray), 1.2])
+            plt.plot(mzarray, outputs/max(intensityarray), 'b')
+            ax.yaxis.set_minor_locator(MultipleLocator(0.25))
+            plt.locator_params(axis = 'y', tight = True, nbins = 3)    
+            
+            ax = plt.subplot(313)
+            plt.title('Subtracted Spectrum')
+            plt.axis( [min(mzarray), max(mzarray), -0.2, 1.2])
+            plt.plot(mzarray, (DiffSpec)/max(intensityarray), 'k')
+            plt.xlabel('m/z')
+            ax.yaxis.set_minor_locator(MultipleLocator(0.25))
+            plt.locator_params(axis = 'y', tight = True, nbins = 3)
+            
+            figManager = plt.get_current_fig_manager()
+            figManager.window.showMaximized()
+            figManager.window.raise_()
+            plt.figure()
+            
             for i in range(SimulationNumber):
-                file.write("Mass " + str(i+1) + " is " + str(round(Simulation[i].mass)) + " and abundance is " + str(round(Simulation[i].abundance)))
-                file.write('\n')
-                file.write("at m/z center:\t" + str(round(Simulation[i].center, 1)))
-                file.write('\n')
-                file.write("for peaks:\t" + str([round(Simulation[i].peak_mz[j], 1) for j in range(len(Simulation[i].peak_mz))]))
-                file.write('\n')
-                file.write("at charges:\t" + str(Simulation[i].peak_charges))
-                file.write('\n')
-                file.write("Full width at half maximum of mass peak:\t" + str(round(Simulation[i].central_fit_std * Simulation[i].charge * 2 * 1.1774, 2)))
-                file.write('\n')
-                file.write("Charge center of simulation:\t" + str(round(Simulation[i].curve_center, 2)))
-                file.write('\n')
-                file.write("Height of fitted Gaussian envelope:\t" + str(round(Simulation[i].curve_scale, 1)))
-                file.write('\n')
-                file.write("Full width at half maximum of fitted envelope over charge domain:\t" + str(round(Simulation[i].curve_std * 2 * 1.1774, 2)))
-                file.write('\n')
-                file.write('\n')
-            file.write('Total Peaks Detected:\t' + str(TruePeakNumber))
-            file.write('\n')
+                ax = plt.subplot(SimulationNumber, 2, 2*(i+1) -1)
+                plt.axis( [min(mzarray), max(mzarray), min(intensityarray)/max(intensityarray), 1.2])
+                ax.yaxis.set_minor_locator(MultipleLocator(0.25))
+                plt.locator_params(axis = 'y', tight = True, nbins = 3)
+                plt.plot(mzarray, intensityarray/max(intensityarray), 'k')
+                plt.plot(mzarray, Simulation[i].Function(mzarray)/max(intensityarray), color = ColorDict[i], label = LetterDict[i] + str(round(Simulation[i].mass)) )
+                for j in range(len(Simulation[i].peak_charges)):
+                    plt.text(Simulation[i].mass/Simulation[i].peak_charges[j] + 1.00794, norm(Simulation[i].peak_charges[j], Simulation[i].curve_scale, Simulation[i].curve_center, Simulation[i].curve_std), LetterDict[i]  + str(Simulation[i].peak_charges[j]), ha = 'center', va = 'bottom')
+                plt.legend(loc = 'best', frameon = False)        
+            plt.xlabel('m/z')
+            
+            ax = plt.subplot(2, 2, 2)
+            x = np.linspace(min([Simulation[i].mass for i in range(SimulationNumber)])-20000, max([Simulation[i].mass for i in range(SimulationNumber)]) + 20000, 1000)
+            mass_intensity = np.zeros(len(x))
+            for i in range(SimulationNumber):
+                mass_intensity += norm(x, Simulation[i].abundance, Simulation[i].mass, Simulation[i].central_fit_std * Simulation[i].charge)
+            plt.plot(x, mass_intensity/max(mass_intensity))
+            for i in range(SimulationNumber):
+                plt.text(Simulation[i].mass, Simulation[i].abundance/max([Simulation[j].abundance for j in range(SimulationNumber)]), LetterDict[i]  + str(round(Simulation[i].mass)))
+            plt.title("Deconvolved masses")
+            plt.xlabel('Mass')
+            plt.ylabel('Relative Abundance')
+            plt.axis([min(x), max(x), min(intensityarray)/max(intensityarray), 1.1])
+            ax.yaxis.set_minor_locator(MultipleLocator(0.25))
+            plt.locator_params(axis = 'x', tight = True, nbins = 7)
+            plt.locator_params(axis = 'y', tight = True, nbins = 3)
+            
+            
+            ax = plt.subplot(2,2,4)
+            plt.axis( [min(mzarray), max(mzarray), 0, 1.2])
+            plt.plot(mzarray, intensityarray/max(intensityarray), 'k', label = "Raw")
+            plt.plot(mzarray, outputs/max(intensityarray), 'b', label = "Fitted")
+            plt.xlabel('m/z')
+            plt.legend(loc = 'best', frameon = False)
+            ax.yaxis.set_minor_locator(MultipleLocator(0.25))
+            plt.locator_params(axis = 'y', tight = True, nbins = 3)
+            
+            figManager = plt.get_current_fig_manager()
+            figManager.window.showMaximized()        
+            figManager.window.raise_()
+            plt.show()
+            
+            t_plot = time.time()
+            
+            print "FINAL RESULTS:\n"
+            for i in range(SimulationNumber):
+                print "Mass", i+1, "is", round(Simulation[i].mass), "and abundance is", round(Simulation[i].abundance)
+                print "at m/z center", round(Simulation[i].center, 1)
+                print "for peaks", [round(Simulation[i].peak_mz[j], 1) for j in range(len(Simulation[i].peak_mz))] 
+                print "at charges", Simulation[i].peak_charges
+                print "Full width at half maximum of mass peak is", round(Simulation[i].central_fit_std * Simulation[i].charge * 2 * 1.1774, 2)
+                print "Charge center of simulation: ", round(Simulation[i].curve_center, 2)
+                print "Height at this charge center: ", round(Simulation[i].curve_scale, 1)
+                print "Full width at half maximum over charge domain is", round(Simulation[i].curve_std * 2*1.1774, 2)
+                print "\n"
+            print "Total peaks detected:\t", TruePeakNumber        
+            
+            AllPeaks = []
+            for i in range(SimulationNumber):
+                AllPeaks += Simulation[i].peak_mz #the index of AllPeaks should give the corresponding simulation number
+            
+            Overlaps = [o for o in set(AllPeaks) if AllPeaks.count(o) > 1]
+            OverlapPeakMassDict = {Overlaps[i]: [] for i in range(len(Overlaps))}
+            
+            for i in range(SimulationNumber):
+                for j in range(len(Overlaps)):
+                    if Overlaps[j] in Simulation[i].peak_mz:
+                        OverlapPeakMassDict[Overlaps[j]].append(i)
+            
             for i in range(len(Overlaps)):
-                file.write("Peak at " + str(round(Overlaps[i], 1)) + " is shared by masses " + str([round(Simulation[k].mass) for k in OverlapPeakMassDict[Overlaps[i]]]))
+                print "Peak at", round(Overlaps[i],1) , "is shared by masses ", [round(Simulation[k].mass) for k in OverlapPeakMassDict[Overlaps[i]]]
+            
+            print "\n"
+            
+            if SaveSubtract:
+                if NegToZeros:
+                    for i in range(len(DiffSpec)):
+                        if DiffSpec[i] <0:
+                            DiffSpec[i] = 0.0
+                MakeFile(name, SubtractName, beginning, mzarray, DiffSpec)
+            
+    
+            if SaveMasses:
+                mass_path = name.partition('.txt')[0] + '_' + MassName + '.txt'
+                file = open(mass_path, 'w')
+                for i in range(SimulationNumber):
+                    file.write("Mass " + str(i+1) + " is " + str(round(Simulation[i].mass)) + " and abundance is " + str(round(Simulation[i].abundance)))
+                    file.write('\n')
+                    file.write("at m/z center:\t" + str(round(Simulation[i].center, 1)))
+                    file.write('\n')
+                    file.write("for peaks:\t" + str([round(Simulation[i].peak_mz[j], 1) for j in range(len(Simulation[i].peak_mz))]))
+                    file.write('\n')
+                    file.write("at charges:\t" + str(Simulation[i].peak_charges))
+                    file.write('\n')
+                    file.write("Full width at half maximum of mass peak:\t" + str(round(Simulation[i].central_fit_std * Simulation[i].charge * 2 * 1.1774, 2)))
+                    file.write('\n')
+                    file.write("Charge center of simulation:\t" + str(round(Simulation[i].curve_center, 2)))
+                    file.write('\n')
+                    file.write("Height of fitted Gaussian envelope:\t" + str(round(Simulation[i].curve_scale, 1)))
+                    file.write('\n')
+                    file.write("Full width at half maximum of fitted envelope over charge domain:\t" + str(round(Simulation[i].curve_std * 2 * 1.1774, 2)))
+                    file.write('\n')
+                    file.write('\n')
+                file.write('Total Peaks Detected:\t' + str(TruePeakNumber))
                 file.write('\n')
-            file.close()
-            print 'Mass information saved to directory ', mass_path  
-        
-        t_write = time.time()
-        
-        print "Total time used: ", t_write - t
-        print "Time to read in: ", t_read - t
-        print "Time to process: ", t_process - t_read
-        print "Time to detect peaks: ", t_peak - t_process
-        print "Time to find overlaps: ", t_overlap - t_peak
-        print "Time to assign charge states: ", t_charge - t_overlap
-        print "Time to plot: ", t_plot - t_charge
-        print "Time to write to file: ", t_write - t_plot
+                for i in range(len(Overlaps)):
+                    file.write("Peak at " + str(round(Overlaps[i], 1)) + " is shared by masses " + str([round(Simulation[k].mass) for k in OverlapPeakMassDict[Overlaps[i]]]))
+                    file.write('\n')
+                file.close()
+                print 'Mass information saved to directory ', mass_path  
+            
+            t_write = time.time()
+            
+            print "Total time used: ", t_write - t
+            print "Time to read in: ", t_read - t
+            print "Time to process: ", t_process - t_read
+            print "Time to detect peaks: ", t_peak - t_process
+            print "Time to find overlaps: ", t_overlap - t_peak
+            print "Time to assign charge states: ", t_charge - t_overlap
+            print "Time to plot: ", t_plot - t_charge
+            print "Time to write to file: ", t_write - t_plot
     
     
     
