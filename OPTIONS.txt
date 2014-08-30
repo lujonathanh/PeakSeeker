@@ -1,7 +1,7 @@
-directory	C:\Python27\Raw Data\130221_polii_50uMam.txt
-Automatic	1	#1 is Automatic, 0 is Manual Mode, with peak displaying and user approval.
+directory	./SampleTextFile.txt
+Automatic	0	#1 is Automatic, 0 is Manual Mode, with peak displaying and user approval.
 PeakDispTime	1	# Manual Mode: the time that the tallest peak options are displayed. Don't set to 0.
-ChargeDispTime	1	# Manual Mode: the time that the charge state options are displayed. Don't set to 0.
+ChargeDispTime	5	# Manual Mode: the time that the charge state options are displayed. Don't set to 0.
 Window_max	None	#the maximum m/z of the spectrum that you want. None is just the max
 Window_min	None	#the minimum m/z of the spectrum that you want. None is just the min.
 max_mass	1000000	#Maximum mass allowed.
@@ -25,7 +25,7 @@ UseProcessed	0	#If 1, perform deconvolution on the processed spectrum, not the o
 --*PEAK DETECTION OPTIONS*--
 
 PeakFindWay	i	#Options: i=intensity threshold+local max, c=continuous wavelet transform with ridge lines, m=Massign peak detection
-Threshold	0.20	# Fraction of the the highest peak's intensity. Used in intensity threshold  and Massign peak detection PeakFindWay.
+Threshold	0.10	# Fraction of the the highest peak's intensity. Used in intensity threshold  and Massign peak detection PeakFindWay.
 JustPeaks	0	#Only want peak detection display, enter 1, else 0.
 FindOverlaps	1	# 1 means use 2nd Derivative to find peaks as local minima and fit multiple Gaussians correspondingly. 0 means No
 DerivThresh	0.3	#for FindOverlaps. A local minimum is only a peak if it is less than DerivThresh * median of negative 2nd Derivatives in range
@@ -63,5 +63,5 @@ NegToZeros	0	#if saving subtracted file, turn all negative values into just 0s.
 SubtractName	subtract	#this will be appended to the end of the subtracted file name
 
 --*SAVING MASS INFORMATION*--
-SaveMasses	0	#If 1, save mass, abundance, and peak info as text file under same directory as original.
+SaveMasses	1	#If 1, save mass, abundance, and peak info as text file under same directory as original.
 MassName	masses	#this will be appended to the end of the masses file name
