@@ -13,13 +13,13 @@ Installation
 ------------
 * You must have Python 2.7, scipy, numpy, and matplotlib installed. I highly recommend using iPython, either in the Anaconda Distribution (http://continuum.io/downloads) or Enthought Canopy Environment (https://store.enthought.com/downloads/). If using Anaconda, run the program through the iPython qtconsole, not Spyder. 
 
-* Download and save both PeakSeeker.py and PEAKSEEKER OPTIONS.txt
+* Download and save both PeakSeeker.py and OPTIONS.txt
 
-* In order to use the program, you must specify the directory path of PEAKSEEKER OPTIONS.txt in the program code of PeakSeeker.py. Control+f "opener = open('C:\Python27\PEAKSEEKER OPTIONS.txt')" This is around line 1353.
+* In order to use the program, you must specify the directory path of PEAKSEEKER OPTIONS.txt in the program code of PeakSeeker.py. Control+f "opener = open('./OPTIONS.txt')" This is around line 1343.
 
-* Similarly, PEAKSEEKER OPTIONS.txt must specify, in the first line, the directory path of a text file with the mass spectra (i.e. copy-pasted from XCalibur) 
+* Similarly, OPTIONS.txt must specify, in the first line, the directory path of a text file with the mass spectrum (i.e. copy-pasted from XCalibur) 
 
-* Do NOT remove the header lines of the text file. The program will remove these automatically.
+* Do NOT remove the header lines of the text file with the mass spectrum. The program will remove these automatically.
 
 The program isn't working! What do I do?
 ----------------------------------------
