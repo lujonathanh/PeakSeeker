@@ -11,19 +11,20 @@ The details of the algorithm will be available in an upcoming paper.
 
 Installation
 ------------
-* You must have Python 2.7, scipy, numpy, and matplotlib installed. You have one of the following options:
-  * the Anaconda Distribution's iPython (http://continuum.io/downloads) 
+* You must have Python 2.7, scipy, numpy, and matplotlib installed. You can do any one of the following:
+  * Download Anaconda (http://continuum.io/downloads)
     * If using Anaconda, run the program through the iPython qtconsole, not Spyder. 
-  * the Enthought Canopy Environment (https://store.enthought.com/downloads/). 
-  * manual installation of libraries
+  * Download Canopy Express (https://store.enthought.com/downloads/).
+  * Download any of the other options in the Scipy Stack (http://www.scipy.org/install.html).
+  * Download plain old Python 2.7 (https://www.python.org/downloads/), and manually install the libraries (http://www.scipy.org/install.html, scroll down to "Individual Binary and Source Packages")
 
-* Download and save both PeakSeeker.py and OPTIONS.txt
+* Download and save PeakSeeker.py and OPTIONS.txt in a convenient directory.
 
 * Specify the directory path of OPTIONS.txt in the program code of PeakSeeker.py:
   * Control+f "opener = open('./OPTIONS.txt')" This is at line 1378.
   * Change './OPTIONS.txt' to your OPTIONS file path, still in apostrophes
   
-* Similarly, Change the first line of OPTIONS.txt to the directory path of the mass spectrum .txt file, as copy-pasted from XCalibur.
+* Similarly, change the first line of OPTIONS.txt to the directory path of the mass spectrum .txt file, as copy-pasted from XCalibur.
     * Do NOT remove the header lines of the text file with the mass spectrum. The program will remove these automatically.
     * The first line should look like "directory	(directory path of text file)"
 
