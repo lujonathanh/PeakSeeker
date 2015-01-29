@@ -1375,7 +1375,7 @@ def main():
     
     global StdDevStartGuess
     
-    opener = open('/Users/jlu96/Desktop/Python27/OPTIONS.txt') #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
+    opener = open('./OPTIONS.txt') #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
     index = 0
     for line in opener:
         value = line.partition('\t')[2].partition('\t')[0]
