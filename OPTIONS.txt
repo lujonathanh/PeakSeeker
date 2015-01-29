@@ -1,6 +1,6 @@
 directory	./SampleTextFile.txt
 Automatic	0	#1 is Automatic, 0 is Manual Mode, with peak displaying and user approval.
-PeakDispTime	1	# Manual Mode: the time that the tallest peak options are displayed. Don't set to 0.
+PeakDispTime	5	# Manual Mode: the time that the tallest peak options are displayed. Don't set to 0.
 ChargeDispTime	5	# Manual Mode: the time that the charge state options are displayed. Don't set to 0.
 BigDisplay	0	# If 1, the plots will be maximized when you display them.
 Window_max	None	#the maximum m/z of the spectrum that you want. None is just the max
