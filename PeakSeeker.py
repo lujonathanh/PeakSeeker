@@ -20,9 +20,9 @@ from scipy.optimize import leastsq
 from scipy import stats
 from scipy import signal
 import matplotlib
-matplotlib.use('Qt4Agg')
+#matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
-plt.switch_backend('Qt4Agg')
+#plt.switch_backend('Qt4Agg')
 from math import factorial
 import operator
 from itertools import groupby
@@ -95,7 +95,8 @@ class Peaks:
         self.fit_std = 5         #standard deviation of Gaussian fitted to peak
         self.left = None         #Peak index of peak adjacent to the left
         self.right= None         #Peak index of peak adjacent to the right
-        self.is_empty = True     #whether Peak object has any values within LEFT OFF 10/13/13
+        self.is_empty = True     #whether Peak object has any values within
+        self.width = 0
     
     def c(self):                #sets up the Peak centroid value
         cent = 0
@@ -140,7 +141,13 @@ class Peaks:
         if self.intensity == []:
             print "ERROR: Peak is Empty", self.simulated, self.is_empty, self.indices, self.mz, self.intensity
         self.height = max(self.intensity)
-        
+    
+    def w(self):
+        for i in range(len(self.mz)):
+                if self.intensity[i] > 0.5 * self.height: break;
+        for j in range(i, len(self.mz)):
+                if self.intensity[j] < 0.5 * self.height: break;
+        self.width = self.mz[j] - self.mz[i]
     
     def PeakFit(self, UseDiff, SimNumber): #this is fitted over m/z, not charge. it doesn't use self.intensity so it can accomodate subtracted spectra
         if UseDiff:
@@ -381,6 +388,7 @@ class Envelope:
         print "Considering the peak at ", round(self.center), ": \n"
     
     def CompleteFit(self, Peak, UseDiff):
+        global BigDisplay
         global mzarray
         global intensityarray
         global ScoreLimit
@@ -475,9 +483,10 @@ class Envelope:
                         ax.plot(sort_col[2][i], sort_col[3][i], color = ColorDict[i], marker = 'o', linestyle = 'None', label = "%d" % (sort_col[0][i]))
                     handles, labels = ax.get_legend_handles_labels()
                     ax.legend(handles[::-1], labels[::-1], loc = 'best')
-                    figManager = plt.get_current_fig_manager()
-                    figManager.window.showMaximized()
-                    figManager.window.raise_()
+                    if BigDisplay:
+                        figManager = plt.get_current_fig_manager()
+                        figManager.window.showMaximized()
+                        figManager.window.raise_()
                     plt.show()
                     plt.pause(ChargeDisplayTime)
                     while 1:
@@ -524,6 +533,7 @@ def ScoreFunction(m0, m1, h0, h1, sd0, sd1, printplease): #returns the value of 
     return (MassErrWeight*abs((m0-m1)/m0) + HeightErrWeight*abs((h0-h1)/h0) + StdDevErrWeight*abs((abs(sd0)-abs(sd1))/sd0))
 
 def Max_Unsimulated_Index(Peak): #returns the index of the maximum value not simulated
+    global BigDisplay
     global PeakNumber
     global Automatic
     global PeakDisplayTime
@@ -556,9 +566,10 @@ def Max_Unsimulated_Index(Peak): #returns the index of the maximum value not sim
             for i in range(len(indices)):
                 plt.plot(Peak[indices[i]].centroid, Peak[indices[i]].height, color = ColorDict[i], marker = 'o', linestyle = 'None', label = "Peak %d: %.0f" % (i+1, Peak[indices[i]].centroid))
             plt.legend(loc = 'best')
-            figManager = plt.get_current_fig_manager()
-            figManager.window.showMaximized()
-            figManager.window.raise_()
+            if BigDisplay:
+                figManager = plt.get_current_fig_manager()
+                figManager.window.showMaximized()
+                figManager.window.raise_()
             plt.show()
             plt.pause(PeakDisplayTime)
             while 1:
@@ -630,6 +641,7 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
     global half_gaussian_center_right
     global res_use_half_left
     global res_use_half_right
+    global WeightWidths
     thresh = DerivThresh # for second derivative. multiply to the median of negative derivatives
     height_fraction = 0.001 # for the peak m/z range. if a data point is below height_fraction * the peak height, then it's not in the peak m/z range
 
@@ -719,7 +731,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
         return([mz], [intensity], [indices])
     elif len(peakind) == 2:
         sd_guess /=2
-        h1, h2, m1, m2, sd1, sd2 = [intensity[peakind[0]], intensity[peakind[1]], mz[peakind[0]], mz[peakind[1]], sd_guess, sd_guess] #initial guesses
+        if WeightWidths:
+            h1, h2, m1, m2 = [intensity[peakind[0]], intensity[peakind[1]], mz[peakind[0]], mz[peakind[1]]] #initial guesses
+            sd1, sd2 = np.array([h1, h2]) * sd_guess / sum(np.array([h1, h2]))
+        else:
+            h1, h2, m1, m2, sd1, sd2 = [intensity[peakind[0]], intensity[peakind[1]], mz[peakind[0]], mz[peakind[1]], sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
                 p = [h1, m1, sd1, h2, m2, sd2]
@@ -761,7 +777,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
       
     elif len(peakind) == 3:
         sd_guess/= 3
-        h1, h2, h3, m1, m2, m3, sd1, sd2, sd3 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], sd_guess, sd_guess, sd_guess] #initial guesses
+        if WeightWidths:
+            h1, h2, h3, m1, m2, m3 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]]] #initial guesses
+            sd1, sd2, sd3 = np.array([h1, h2, h3]) * sd_guess / sum(np.array([h1, h2, h3]))
+        else:
+            h1, h2, h3, m1, m2, m3, sd1, sd2, sd3 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], sd_guess, sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
                 p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3]
@@ -803,8 +823,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                     returnindices[j].append(i+indices[0])
     elif len(peakind) == 4:
         sd_guess /= 4
-        
-        h1, h2, h3, h4, m1, m2, m3, m4, sd1, sd2, sd3, sd4 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
+        if WeightWidths:
+            h1, h2, h3, h4, m1, m2, m3, m4= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]] ] #initial guesses
+            sd1, sd2, sd3, sd4 = np.array([h1, h2, h3, h4]) * sd_guess / sum(np.array([h1, h2, h3, h4]))
+        else:
+            h1, h2, h3, h4, m1, m2, m3, m4, sd1, sd2, sd3, sd4 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
                 p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4]
@@ -851,7 +874,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
         
     elif len(peakind) == 5:
         sd_guess /= 5
-        h1, h2, h3, h4, h5, m1, m2, m3, m4, m5, sd1, sd2, sd3, sd4, sd5 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
+        if WeightWidths:
+            h1, h2, h3, h4, h5, m1, m2, m3, m4, m5= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]]] #initial guesses
+            sd1, sd2, sd3, sd4, sd5 = np.array([h1, h2, h3, h4, h5]) * sd_guess / sum(np.array([h1, h2, h3, h4, h5]))
+        else:
+            h1, h2, h3, h4, h5, m1, m2, m3, m4, m5, sd1, sd2, sd3, sd4, sd5 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
                 p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5]
@@ -901,8 +928,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
     elif len(peakind) == 6:
         sd_guess /= 6
 
-        
-        h1, h2, h3, h4, h5, h6, m1, m2, m3, m4, m5, m6, sd1, sd2, sd3, sd4, sd5, sd6 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], intensity[peakind[5]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], mz[peakind[5]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
+        if WeightWidths:
+            h1, h2, h3, h4, h5, h6, m1, m2, m3, m4, m5, m6= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], intensity[peakind[5]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], mz[peakind[5]]] #initial guesses
+            sd1, sd2, sd3, sd4, sd5, sd6 = np.array([h1, h2, h3, h4, h5, h6]) * sd_guess / sum(np.array([h1, h2, h3, h4, h5, h6]))
+        else:
+            h1, h2, h3, h4, h5, h6, m1, m2, m3, m4, m5, m6, sd1, sd2, sd3, sd4, sd5, sd6 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], intensity[peakind[5]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], mz[peakind[5]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
                 p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, m6, sd6]
@@ -1306,7 +1336,11 @@ def main():
     global min_charge
     global PeakDisplayTime
     global ChargeDisplayTime
+    global BigDisplay
     global Automatic
+    MaxWidth = None
+    MinWidth = None
+
     
     global PeakNumber
     global MaxSimulations
@@ -1317,6 +1351,7 @@ def main():
     
     global DerivThresh
     global NeedZeroCrossing
+    global WeightWidths
     
     global ColorDict
     ColorDict = dict([(0, 'r'), (1 , 'y'), (2, 'g'), (3, 'c'), (4,'m'), (5, 'b'), (6, 'purple'), (7, 'SaddleBrown'), (8, 'chartreuse'), (9, 'orange') ])
@@ -1340,7 +1375,7 @@ def main():
     
     global StdDevStartGuess
     
-    opener = open('./OPTIONS.txt') #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
+    opener = open('/Users/jlu96/Desktop/Python27/OPTIONS.txt') #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
     index = 0
     for line in opener:
         value = line.partition('\t')[2].partition('\t')[0]
@@ -1354,117 +1389,125 @@ def main():
         elif index == 3:
             ChargeDisplayTime = eval(value)
         elif index == 4:
-            MaxMz = eval(value)
+            BigDisplay = eval(value)
         elif index == 5:
-            MinMz = eval(value)
+            MaxMz = eval(value)
         elif index == 6:
-            max_mass = eval(value)
+            MinMz = eval(value)
         elif index == 7:
-            min_mass = eval(value)
+            max_mass = eval(value)
         elif index == 8:
-            max_charge = eval(value)
+            min_mass = eval(value)
         elif index == 9:
+            max_charge = eval(value)
+        elif index == 10:
             min_charge = eval(value)
+        elif index == 11:
+            MaxWidth = eval(value)
+        elif index == 12:
+            MinWidth = eval(value)
 
         #PROCESSING OPTIONS BEING READ IN
         
-        elif index == 13:
-            BkgrdRemove = eval(value)
-        elif index == 14:
-            background_remove_window = eval(value)
-        elif index == 15:
-            background_smooth_window = eval(value)
         elif index == 16:
-            DoSmooth = eval(value)
+            BkgrdRemove = eval(value)
         elif index == 17:
-            smooth_window = eval(value)
+            background_remove_window = eval(value)
         elif index == 18:
-            DoSavitzky = eval(value)
+            background_smooth_window = eval(value)
         elif index == 19:
-            Savitz_Window = eval(value)
+            DoSmooth = eval(value)
         elif index == 20:
-            Savitz_Order = eval(value)
+            smooth_window = eval(value)
         elif index == 21:
-            Savitz_Times = eval(value)
+            DoSavitzky = eval(value)
         elif index == 22:
+            Savitz_Window = eval(value)
+        elif index == 23:
+            Savitz_Order = eval(value)
+        elif index == 24:
+            Savitz_Times = eval(value)
+        elif index == 25:
             UseProcessed = eval(value)
         
         #PEAK DETECTION OPTIONS BEING READ IN
             
-        elif index == 26:
-            PeakDetectionType = value
-        elif index == 27:
-            threshold = eval(value)
-        elif index == 28:
-            JustPeaks = eval(value)
         elif index == 29:
-            FindOverlaps = eval(value)
+            PeakDetectionType = value
         elif index == 30:
-            DerivThresh = eval(value)
+            threshold = eval(value)
         elif index == 31:
-            NeedZeroCrossing = eval(value)
+            JustPeaks = eval(value)
         elif index == 32:
-            adj_factor = eval(value)
+            FindOverlaps = eval(value)
         elif index == 33:
-            cwt_widths = np.arange(eval(value.partition('-')[0]), eval(value.partition('-')[2].partition(',')[0]), eval(value.partition(',')[2]))
+            DerivThresh = eval(value)
         elif index == 34:
-            cwt_wavelet = eval(value) 
+            NeedZeroCrossing = eval(value)
         elif index == 35:
-            cwt_max_distances = eval(value) 
+            WeightWidths = eval(value)
         elif index == 36:
-            cwt_gap_thresh = eval(value)  
+            adj_factor = eval(value)
         elif index == 37:
-            cwt_min_length = eval(value)
+            cwt_widths = np.arange(eval(value.partition('-')[0]), eval(value.partition('-')[2].partition(',')[0]), eval(value.partition(',')[2]))
         elif index == 38:
-            cwt_min_snr = eval(value)
+            cwt_wavelet = eval(value) 
         elif index == 39:
+            cwt_max_distances = eval(value) 
+        elif index == 40:
+            cwt_gap_thresh = eval(value)  
+        elif index == 41:
+            cwt_min_length = eval(value)
+        elif index == 42:
+            cwt_min_snr = eval(value)
+        elif index == 43:
             cwt_noise_perc = eval(value)
         
         #CHARGE STATE ASSIGNMENT OPTIONS BEING READ IN
         
-        elif index == 43:
-            MassTolerance = eval(value)
-        elif index == 44:
-            ScoreLimit = eval(value)
-        elif index == 45:
-            MassErrWeight = eval(value)
-        elif index == 46:
-            HeightErrWeight = eval(value)
         elif index == 47:
-            StdDevErrWeight = eval(value)
+            MassTolerance = eval(value)
         elif index == 48:
-            AttemptLimit = eval(value)
+            ScoreLimit = eval(value)
         elif index == 49:
-            RuntimeErrorLimit = eval(value)
+            MassErrWeight = eval(value)
         elif index == 50:
-            min_peak_number = eval(value)
+            HeightErrWeight = eval(value)
         elif index == 51:
-            MaxSimulations = eval(value)
+            StdDevErrWeight = eval(value)
         elif index == 52:
-            RepeatSearch = eval(value)
+            AttemptLimit = eval(value)
         elif index == 53:
-            UseSubtract = eval(value)
+            RuntimeErrorLimit = eval(value)
         elif index == 54:
-            SubtractAuto = eval(value)
+            min_peak_number = eval(value)
         elif index == 55:
-            NumberRefit = eval(value)
+            MaxSimulations = eval(value)
         elif index == 56:
+            RepeatSearch = eval(value)
+        elif index == 57:
+            UseSubtract = eval(value)
+        elif index == 58:
+            SubtractAuto = eval(value)
+        elif index == 59:
+            NumberRefit = eval(value)
+        elif index == 60:
             StdDevStartGuess = eval(value)    
             
         #SAVING SUBTRACTED SPECTRUM BEING READ IN
         
-        elif index == 60:
+        elif index == 64:
             SaveSubtract = eval(value)
-        elif index == 61:
+        elif index == 65:
             NegToZeros = eval(value)
-        elif index == 62:
+        elif index == 66:
             SubtractName = value
         
         #SAVING MASS INFORMATION BEING READ IN
         
-        elif index == 65:
+        elif index == 69:
             SaveMasses = eval(value)
-        elif index == 66:
+        elif index == 70:
             MassName = value
         index += 1
     opener.close()
@@ -1698,10 +1741,24 @@ def main():
                 i+=1
         
 
-    #PEAK HEIGHT AND CENTROID CALCULATION***************************************
+    #PEAK HEIGHT, CENTROID, AND WIDTH CALCULATION*******************************
     for i in range(PeakNumber):
         Peak[i].h()
         Peak[i].c()
+        Peak[i].w()
+    
+    i = 0
+    while 1:
+        if i >=PeakNumber:
+            break;
+        if (MinWidth != None and Peak[i].width < MinWidth)  or (MaxWidth != None and Peak[i].width > MaxWidth):
+            Peak.remove(Peak[i])
+            PeakNumber -=1
+            print "Peak of width outside range removed."
+            print "Updated number of peaks is", PeakNumber
+        else:
+            i+=1
+
         
     #CHECK PEAK FITTING*********************************************************
     for i in range(PeakNumber):
@@ -1751,9 +1808,10 @@ def main():
             plt.ylabel('Relative Intensity')
             ax.yaxis.set_minor_locator(MultipleLocator(0.25))
             plt.locator_params(axis = 'y', tight = True, nbins = 3)
-            figManager = plt.get_current_fig_manager()
-            figManager.window.showMaximized()
-            figManager.window.raise_()
+            if BigDisplay:
+                figManager = plt.get_current_fig_manager()
+                figManager.window.showMaximized()
+                figManager.window.raise_()
             plt.show()
         
         else: #Just displays found peaks
@@ -1768,10 +1826,10 @@ def main():
             plt.title("Found Peaks")
             plt.xlabel('m/z')
             plt.ylabel('Relative Intensity')
-            
-            figManager = plt.get_current_fig_manager()
-            figManager.window.showMaximized()
-            figManager.window.raise_()
+            if BigDisplay:
+                figManager = plt.get_current_fig_manager()
+                figManager.window.showMaximized()
+                figManager.window.raise_()
             plt.show()
         
         t_plot = time.time()
@@ -1910,9 +1968,10 @@ def main():
             ax.yaxis.set_minor_locator(MultipleLocator(0.25))
             plt.locator_params(axis = 'y', tight = True, nbins = 3)
             
-            figManager = plt.get_current_fig_manager()
-            figManager.window.showMaximized()
-            figManager.window.raise_()
+            if BigDisplay:
+                figManager = plt.get_current_fig_manager()
+                figManager.window.showMaximized()
+                figManager.window.raise_()
             plt.figure()
             
             for i in range(SimulationNumber):
@@ -1953,9 +2012,10 @@ def main():
             ax.yaxis.set_minor_locator(MultipleLocator(0.25))
             plt.locator_params(axis = 'y', tight = True, nbins = 3)
             
-            figManager = plt.get_current_fig_manager()
-            figManager.window.showMaximized()        
-            figManager.window.raise_()
+            if BigDisplay:
+                figManager = plt.get_current_fig_manager()
+                figManager.window.showMaximized()        
+                figManager.window.raise_()
             plt.show()
             
             t_plot = time.time()
@@ -2003,6 +2063,7 @@ def main():
                 file = open(mass_path, 'w')
                 for i in range(SimulationNumber):
                     file.write("Mass " + str(i+1) + " is " + str(round(Simulation[i].mass)) + " and abundance is " + str(round(Simulation[i].abundance)))
+                    file.write(" and sum of heights is " + str(round(sum(Simulation[i].peak_heights))))
                     file.write('\n')
                     file.write("at m/z center:\t" + str(round(Simulation[i].center, 1)))
                     file.write('\n')
