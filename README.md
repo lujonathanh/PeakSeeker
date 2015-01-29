@@ -43,14 +43,18 @@ Run through Manual Mode once to test your installation.
 
 
 5. Return to the command line^. If you would like to continue interacting with the plot, enter /. This will close the plot and reopen it for a brief interactivity time. Otherwise, enter 1. This is the number of the tallest peak. The program will now iterate charge states to this peak.
+
   ![Command Line Peak](http://i.imgur.com/32hCfTD.png)
+
 
 6. Another plot will pop up. This lists several peak series with different colored dots. The dot height represents the height of the simulated peak in the simulated charge envelope. Peaks with the same colored dots are in the same envelope. The number next to the colored dots in the key is the corresponding charge state of the central peak. Note that 48 fits better than 50, for example, because the dots are closer to the heights of the real peaks.
    ![Charge Display 1](http://i.imgur.com/5cSYEsb.png)
 
 7. Return to the command line^. It should list the charges in the plot, the corresponding masses, and the list of scores. A lower score means a better fit. The charges are already ordered from lowest to highest score.
 8. Enter 48. This will save the envelope and mark off the peak as simulated.
+
    ![Command Line Charge 1](http://i.imgur.com/wLhtBso.png)
+
 
 9. Another plot will pop up. This lists the 5 tallest peaks that haven't been simulated, similar to step 4.
    ![Peak Display 2](http://i.imgur.com/nyclcn6.png)
@@ -60,7 +64,9 @@ Run through Manual Mode once to test your installation.
    ![Charge Display 2](http://i.imgur.com/61C91nE.png)
 
 12. Return to the command line^. Enter 50. Note that this has a higher score than 25. However, 25 gives a mass that is half of the true mass (the envelope has every other peak). The scoring algorithm will sometimes prefer charge states with less peaks, because these are easier to fit well.
+
    ![Command Line Charge 2](http://i.imgur.com/Ym4IOHz.png)
+
 
 13. Another plot will pop up with the remaining peaks. There are no more major charge envelopes, so enter n.
 14. The final plots will display all of the simulated envelopes, the sum of the simulated envelopes, and the subtracted spectra. You can save these plots.
