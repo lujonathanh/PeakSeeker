@@ -27,7 +27,7 @@ Installation
     * Do NOT remove the header lines of the text file with the mass spectrum. The program will remove these automatically.
     * The first line should look like "directory	(directory path of text file)"
 
-* Run through Manual Mode once.
+1. Run through Manual Mode once.
 ..1. Save the SampleTextFile.txt
 ..2. Change the first line of OPTIONS.txt to the path of SampleFile.txt. Save OPTIONS.txt.
 ..3. Run PeakSeeker.py
