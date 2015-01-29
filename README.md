@@ -68,8 +68,6 @@ Run through Manual Mode once to test your installation.
 ![Final Display 1](http://i.imgur.com/0H6Gql6.png)
 ![Final Display 2](http://i.imgur.com/qy9h1wp.png)
 ![Final Output](http://i.imgur.com/u02UBVH.png)
-![Final Output 2](http://i.imgur.com/jQxmfgb.png)
-
 
 
 User Manual
