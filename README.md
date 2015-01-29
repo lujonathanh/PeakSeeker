@@ -27,12 +27,13 @@ Installation
     * Do NOT remove the header lines of the text file with the mass spectrum. The program will remove these automatically.
     * The first line should look like "directory	(directory path of text file)"
 
-1. Run through Manual Mode once.
-..1. Save the SampleTextFile.txt
-..2. Change the first line of OPTIONS.txt to the path of SampleFile.txt. Save OPTIONS.txt.
-..3. Run PeakSeeker.py
+* Run through Manual Mode once.
+-------------------------------
+1. Save the SampleTextFile.txt
+2. Change the first line of OPTIONS.txt to the path of SampleFile.txt. Save OPTIONS.txt.
+3. Run PeakSeeker.py
 
-..4. A plot will pop up. This lists 5 peaks with dots and centroids. These are the 5 tallest peaks. You should be able to interact with this plot (try clicking the magnifying glass to zoom in on certain parts). Depending on the backend of your matplotlib, the plot will A) be displayed for 5 seconds before it loses interactivity, or B) stay interactive for as long as you want, and then once you close the plot, the command line will wait 5 seconds.
+4. A plot will pop up. This lists 5 peaks with dots and centroids. These are the 5 tallest peaks. You should be able to interact with this plot (try clicking the magnifying glass to zoom in on certain parts). Depending on the backend of your matplotlib, the plot will A) be displayed for 5 seconds before it loses interactivity, or B) stay interactive for as long as you want, and then once you close the plot, the command line will wait 5 seconds.
 ....*If the plot is not interactive at all, matplotlib may be using the wrong backend. Kill the program, then go to lines 23 and 25 in PeakSeeker.py to delete the '#' sign. This should switch to the correct backend, if you are using Anaconda or Canopy.
 
 ..5. DO NOT CLOSE THE PLOT.  Return to the command line. If you would like to continue interacting with the plot, enter /. This will close the plot and reopen it for a brief interactivity time. Otherwise, enter 1. This is the number of the tallest peak. The program will now iterate charge states to this peak.
