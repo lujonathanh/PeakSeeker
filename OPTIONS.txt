@@ -67,5 +67,5 @@ NegToZeros	0	#if saving subtracted file, turn all negative values into just 0s.
 SubtractName	subtract	#this will be appended to the end of the subtracted file name
 
 --*SAVING MASS INFORMATION*--
-SaveMasses	1	#If 1, save mass, abundance, and peak info as text file under same directory as original.
+SaveMasses	0	#If 1, save mass, abundance, and peak info as text file under same directory as original.
 MassName	masses	#this will be appended to the end of the masses file name
