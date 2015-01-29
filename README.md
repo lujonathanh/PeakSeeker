@@ -39,25 +39,41 @@ Run through Manual Mode once to test your installation.
    * ^ If you have A), DO NOT CLOSE THE PLOT. It will close automatically once you enter in the command line.   
    * ^ If you have B), you need to close the plot in order to return to the command line.  
 
-![Peak Display 1]
-(http://imgur.com/UM7x7WN)
-
+  ![Peak Display 1](http://i.imgur.com/UM7x7WN.png)
 
 
 5. Return to the command line^. If you would like to continue interacting with the plot, enter /. This will close the plot and reopen it for a brief interactivity time. Otherwise, enter 1. This is the number of the tallest peak. The program will now iterate charge states to this peak.
+  ![Command Line Peak](http://i.imgur.com/32hCfTD.png)
+
 6. Another plot will pop up. This lists several peak series with different colored dots. The dot height represents the height of the simulated peak in the simulated charge envelope. Peaks with the same colored dots are in the same envelope. The number next to the colored dots in the key is the corresponding charge state of the central peak. Note that 48 fits better than 50, for example, because the dots are closer to the heights of the real peaks.
+   ![Charge Display 1](http://i.imgur.com/5cSYEsb.png)
+
 7. Return to the command line^. It should list the charges in the plot, the corresponding masses, and the list of scores. A lower score means a better fit. The charges are already ordered from lowest to highest score.
 8. Enter 48. This will save the envelope and mark off the peak as simulated.
+   ![Command Line Charge 1](http://i.imgur.com/wLhtBso.png)
+
 9. Another plot will pop up. This lists the 5 tallest peaks that haven't been simulated, similar to step 4.
+   ![Peak Display 2](http://i.imgur.com/nyclcn6.png)
 10. Return to the command line^. Enter 1. The program will now iterate charge states to this peak.
+
 11. Another plot will pop up, again listing the possible charge states.
+   ![Charge Display 2](http://i.imgur.com/61C91nE.png)
+
 12. Return to the command line^. Enter 50. Note that this has a higher score than 25. However, 25 gives a mass that is half of the true mass (the envelope has every other peak). The scoring algorithm will sometimes prefer charge states with less peaks, because these are easier to fit well.
+   ![Command Line Charge 2](http://i.imgur.com/Ym4IOHz.png)
+
 13. Another plot will pop up with the remaining peaks. There are no more major charge envelopes, so enter n.
 14. The final plots will display all of the simulated envelopes, the sum of the simulated envelopes, and the subtracted spectra. You can save these plots.
 
+![Final Display 1](http://i.imgur.com/0H6Gql6.png)
+![Final Display 2](http://i.imgur.com/qy9h1wp.png)
+![Final Output](http://i.imgur.com/u02UBVH.png)
+![Final Output 2](http://i.imgur.com/jQxmfgb.png)
+
+
 
 User Manual
------------
+===========
 
 ### STARTING PARAMETERS
 * __Automatic__
@@ -66,10 +82,7 @@ User Manual
 	
 * __Manual__
 	* The user can choose which peak to deconvolute, and which charge state is the best answer from a list of charge states.
-	* The program works by displaying the spectrum with a list of options. See Step 4 and ^ in the manual installation above.
-		* If A), for a short time, the user can interact with the display: e.g. zooming, moving the display, saving the picture.
-		* However, the command line cannot be interacted with during that time.
-		* If B), the user can interact
+	* The program works by displaying the spectrum with a list of options. See Step 4 in the manual installation above.
 		* __PeakDispTime__ Time in seconds the peak plot will display.
 		* __ChargeDispTime__ Time in seconds the charge plot will display.
 		* Return to the command line to make your choice^.
@@ -138,8 +151,12 @@ User Manual
 	- Use RepeatSearch so you don't have to fit all of them at the same time. This subtracts the found envelopes and repeat searching.
 
 ### DISPLAYS AND SAVING SUBTRACTED SPECTRUM, MASS INFORMATION
-
-- See matplotlib for ways to manipulate displays.
+- __DISPLAYS:__
+  - Displays can be zoomed in (magnifying glass image) and out.
+  - The window can be shifted (the cross with arrows image). 
+  - The pictures can be saved in one of several formats (save file image).
+  - You can go back to the original display. (home image)
+  - See matplotlib for ways to manipulate displays.
 
 - __SaveSubtract__ saves the subtracted spectrum as a text file in the same directory as the original spectrum, with the same header.
 
