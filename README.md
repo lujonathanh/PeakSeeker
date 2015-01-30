@@ -18,7 +18,7 @@ Installation
   * Download any of the other options in the Scipy Stack (http://www.scipy.org/install.html).
   * Download plain old Python 2.7 (https://www.python.org/downloads/), and manually install the libraries (http://www.scipy.org/install.html, scroll down to "Individual Binary and Source Packages")
 
-* Download the PeakSeeker pacakge in a zip. Save to a convenient directory.
+* Download the PeakSeeker package in a zip. Save to a convenient directory.
 
 * Open PeakSeeker.py in a text editor.
   * If using Anaconda, launch Spyder and open PeakSeeker.py.
@@ -36,6 +36,13 @@ Installation
         * Do NOT remove the header lines; the program will remove these automatically.
     * The first line should look like "directory	(file path of text file)"
     * Save.
+
+* __PeakSeekerClipboard.py__ provides the extra feature of deconvoluting a spectrum straight from clipboard. 
+  * You must download the clipboard package.
+    * If using Anaconda, open up Spyder. Navigate to Command Prompt under Tools. Type "pip install clipboard setuptools"
+    * If using Canopy, navigate to Canopy Terminal under Tools. Type "pip install clipboard setuptools"
+    * If using Python, download the package from https://pypi.python.org/pypi/clipboard/0.0.4
+  * You must type "clipboard" in place of (file path of text file) in OPTIONS.txt
 
 Run through Manual Mode once to test your installation.
 -------------------------------------------------------
