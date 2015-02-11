@@ -17,8 +17,8 @@ min_width	None	#Minimum full-width at half maximum for detected peaks. None is d
 BkgrdRemove	0	#1 is do background removal, 0 is don't.
 bkgrd_rmve_win	50	#Size of half of the background remove window. Background is defined as the minimum within this window. 
 bkgrd_smth_win	100	#Size of half of the window that smooths the background via moving average.
-DoSmooth	0	#DO NOT USE. 1 is Smooth with moving average, 0 is none
-smooth_window	3	#DO NOT USE. Size of half of the window that smooths the spectrum via moving average.
+DoSmooth	0	#It is preferable to use the Savitsky filter instead of this. 1 is Smooth with moving average, 0 is none
+smooth_window	3	#It is preferable to use the Savitsky filter instead of this. Size of half of the window that smooths the spectrum via moving average.
 DoSavitzky	0	#1 is Smooth with Savitzky-Golay, 0 is None
 savitz_window	5	#Size of half of the Savitzky window
 savitz_order	4	#Order of polynomial to be used
