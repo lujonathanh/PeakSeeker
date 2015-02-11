@@ -33,7 +33,7 @@ JustPeaks	0	#Only want peak detection display, enter 1, else 0.
 FindOverlaps	1	# 1 means use 2nd Derivative to find peaks as local minima and fit multiple Gaussians correspondingly. 0 means No
 DerivThresh	0.3	#for FindOverlaps. A local minimum is only a peak if it is less than DerivThresh * median of negative 2nd Derivatives in range
 NeedCrossing	1	#for FindOverlaps. If 1, local minima only count as peaks if they are separated by a zero-crossing.
-WeightWidths	1	#for FindOverlaps. If 1, when fitting peaks to peak range, weight the starting guesses for peak widths by peak heights. Otherwise, use same starting guess.
+WeightWidths	0	#for FindOverlaps. If 1, when fitting peaks to peak range, weight the starting guesses for peak widths by peak heights. Otherwise, use same starting guess.
 m_adj_factor	0.7	# PeakFindWay: 'm'. After hitting peak above threshold, the threshold becomes that peak's height times the adjustment factor.
 c_widths	1-6,0.5	# PeakFindWay: 'c'. Range of expected FWHMs of peaks of interest, and the interval of the widths to be searched
 c_wavelet	None	# PeakFindWay: 'c'. None is the ricker wavelet. For other wavelets, see scipy.signal.find_peaks_cwt documentation.
