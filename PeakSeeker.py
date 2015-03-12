@@ -730,11 +730,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
     if len(peakind)  == 1:
         return([mz], [intensity], [indices])
     elif len(peakind) == 2:
-        sd_guess /=2
         if WeightWidths:
             h1, h2, m1, m2 = [intensity[peakind[0]], intensity[peakind[1]], mz[peakind[0]], mz[peakind[1]]] #initial guesses
             sd1, sd2 = np.array([h1, h2]) * sd_guess / sum(np.array([h1, h2]))
         else:
+            sd_guess /=2
             h1, h2, m1, m2, sd1, sd2 = [intensity[peakind[0]], intensity[peakind[1]], mz[peakind[0]], mz[peakind[1]], sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
@@ -776,11 +776,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                     returnindices[j].append(i+indices[0])
       
     elif len(peakind) == 3:
-        sd_guess/= 3
         if WeightWidths:
             h1, h2, h3, m1, m2, m3 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]]] #initial guesses
             sd1, sd2, sd3 = np.array([h1, h2, h3]) * sd_guess / sum(np.array([h1, h2, h3]))
         else:
+            sd_guess/= 3
             h1, h2, h3, m1, m2, m3, sd1, sd2, sd3 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], sd_guess, sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
@@ -822,11 +822,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                     returnintensity[j].append(intensity[i]*indiv_intensity[j]/sum(indiv_intensity)) #multiply the actual intensity by the ratio
                     returnindices[j].append(i+indices[0])
     elif len(peakind) == 4:
-        sd_guess /= 4
         if WeightWidths:
             h1, h2, h3, h4, m1, m2, m3, m4= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]] ] #initial guesses
             sd1, sd2, sd3, sd4 = np.array([h1, h2, h3, h4]) * sd_guess / sum(np.array([h1, h2, h3, h4]))
         else:
+            sd_guess /= 4
             h1, h2, h3, h4, m1, m2, m3, m4, sd1, sd2, sd3, sd4 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
@@ -873,11 +873,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                     returnindices[j].append(i+indices[0])
         
     elif len(peakind) == 5:
-        sd_guess /= 5
         if WeightWidths:
             h1, h2, h3, h4, h5, m1, m2, m3, m4, m5= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]]] #initial guesses
             sd1, sd2, sd3, sd4, sd5 = np.array([h1, h2, h3, h4, h5]) * sd_guess / sum(np.array([h1, h2, h3, h4, h5]))
         else:
+            sd_guess /= 5
             h1, h2, h3, h4, h5, m1, m2, m3, m4, m5, sd1, sd2, sd3, sd4, sd5 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
@@ -926,12 +926,11 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                     returnindices[j].append(i+indices[0])
         
     elif len(peakind) == 6:
-        sd_guess /= 6
-
         if WeightWidths:
             h1, h2, h3, h4, h5, h6, m1, m2, m3, m4, m5, m6= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], intensity[peakind[5]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], mz[peakind[5]]] #initial guesses
             sd1, sd2, sd3, sd4, sd5, sd6 = np.array([h1, h2, h3, h4, h5, h6]) * sd_guess / sum(np.array([h1, h2, h3, h4, h5, h6]))
         else:
+            sd_guess /= 6
             h1, h2, h3, h4, h5, h6, m1, m2, m3, m4, m5, m6, sd1, sd2, sd3, sd4, sd5, sd6 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], intensity[peakind[5]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], mz[peakind[5]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
         try:
             if not (res_use_half_left or res_use_half_right):
