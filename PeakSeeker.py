@@ -27,6 +27,7 @@ from math import factorial
 import operator
 from itertools import groupby
 from matplotlib.ticker import MultipleLocator
+import sys
 
 
 def Smooth(array, smooth_window):
@@ -1374,7 +1375,15 @@ def main():
     
     global StdDevStartGuess
     
-    opener = open('./OPTIONS.txt') #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
+    
+    if len(sys.argv) > 1:
+        OptionsDirectory = sys.argv[1]
+    else:
+        OptionsDirectory = '/Users/jlu96/Desktop/Python27/OPTIONS.txt' #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
+    
+    print "Opening Options File from:", OptionsDirectory, "\n"
+    opener = open(OptionsDirectory)
+    
     index = 0
     for line in opener:
         value = line.partition('\t')[2].partition('\t')[0]
@@ -1384,106 +1393,106 @@ def main():
         elif index == 1:
             Automatic = eval(value)
         elif index == 2:
-            PeakDisplayTime = eval(value)
+            JustPeaks = eval(value)
         elif index == 3:
-            ChargeDisplayTime = eval(value)
+            PeakDisplayTime = eval(value)
         elif index == 4:
-            BigDisplay = eval(value)
+            ChargeDisplayTime = eval(value)
         elif index == 5:
-            MaxMz = eval(value)
+            AttemptLimit = eval(value)
         elif index == 6:
-            MinMz = eval(value)
+            MaxSimulations = eval(value)
         elif index == 7:
-            max_mass = eval(value)
+            RepeatSearch = eval(value)
         elif index == 8:
-            min_mass = eval(value)
+            BigDisplay = eval(value)
         elif index == 9:
-            max_charge = eval(value)
+            MaxMz = eval(value)
         elif index == 10:
-            min_charge = eval(value)
+            MinMz = eval(value)
         elif index == 11:
-            MaxWidth = eval(value)
+            max_mass = eval(value)
         elif index == 12:
+            min_mass = eval(value)
+        elif index == 13:
+            max_charge = eval(value)
+        elif index == 14:
+            min_charge = eval(value)
+        elif index == 15:
+            MaxWidth = eval(value)
+        elif index == 16:
             MinWidth = eval(value)
 
         #PROCESSING OPTIONS BEING READ IN
         
-        elif index == 16:
-            BkgrdRemove = eval(value)
-        elif index == 17:
-            background_remove_window = eval(value)
-        elif index == 18:
-            background_smooth_window = eval(value)
-        elif index == 19:
-            DoSmooth = eval(value)
         elif index == 20:
-            smooth_window = eval(value)
+            BkgrdRemove = eval(value)
         elif index == 21:
-            DoSavitzky = eval(value)
+            background_remove_window = eval(value)
         elif index == 22:
-            Savitz_Window = eval(value)
+            background_smooth_window = eval(value)
         elif index == 23:
-            Savitz_Order = eval(value)
+            DoSmooth = eval(value)
         elif index == 24:
-            Savitz_Times = eval(value)
+            smooth_window = eval(value)
         elif index == 25:
+            DoSavitzky = eval(value)
+        elif index == 26:
+            Savitz_Window = eval(value)
+        elif index == 27:
+            Savitz_Order = eval(value)
+        elif index == 28:
+            Savitz_Times = eval(value)
+        elif index == 29:
             UseProcessed = eval(value)
         
         #PEAK DETECTION OPTIONS BEING READ IN
             
-        elif index == 29:
-            PeakDetectionType = value
-        elif index == 30:
-            threshold = eval(value)
-        elif index == 31:
-            JustPeaks = eval(value)
-        elif index == 32:
-            FindOverlaps = eval(value)
         elif index == 33:
-            DerivThresh = eval(value)
+            PeakDetectionType = value
         elif index == 34:
-            NeedZeroCrossing = eval(value)
+            threshold = eval(value)
         elif index == 35:
-            WeightWidths = eval(value)
+            FindOverlaps = eval(value)
         elif index == 36:
-            adj_factor = eval(value)
+            DerivThresh = eval(value)
         elif index == 37:
-            cwt_widths = np.arange(eval(value.partition('-')[0]), eval(value.partition('-')[2].partition(',')[0]), eval(value.partition(',')[2]))
+            NeedZeroCrossing = eval(value)
         elif index == 38:
-            cwt_wavelet = eval(value) 
+            WeightWidths = eval(value)
         elif index == 39:
-            cwt_max_distances = eval(value) 
+            adj_factor = eval(value)
         elif index == 40:
-            cwt_gap_thresh = eval(value)  
+            cwt_widths = np.arange(eval(value.partition('-')[0]), eval(value.partition('-')[2].partition(',')[0]), eval(value.partition(',')[2]))
         elif index == 41:
-            cwt_min_length = eval(value)
+            cwt_wavelet = eval(value) 
         elif index == 42:
-            cwt_min_snr = eval(value)
+            cwt_max_distances = eval(value) 
         elif index == 43:
+            cwt_gap_thresh = eval(value)  
+        elif index == 44:
+            cwt_min_length = eval(value)
+        elif index == 45:
+            cwt_min_snr = eval(value)
+        elif index == 46:
             cwt_noise_perc = eval(value)
         
         #CHARGE STATE ASSIGNMENT OPTIONS BEING READ IN
         
-        elif index == 47:
-            MassTolerance = eval(value)
-        elif index == 48:
-            ScoreLimit = eval(value)
-        elif index == 49:
-            MassErrWeight = eval(value)
         elif index == 50:
-            HeightErrWeight = eval(value)
+            MassTolerance = eval(value)
         elif index == 51:
-            StdDevErrWeight = eval(value)
+            ScoreLimit = eval(value)
         elif index == 52:
-            AttemptLimit = eval(value)
+            MassErrWeight = eval(value)
         elif index == 53:
-            RuntimeErrorLimit = eval(value)
+            HeightErrWeight = eval(value)
         elif index == 54:
-            min_peak_number = eval(value)
+            StdDevErrWeight = eval(value)
         elif index == 55:
-            MaxSimulations = eval(value)
+            RuntimeErrorLimit = eval(value)
         elif index == 56:
-            RepeatSearch = eval(value)
+            min_peak_number = eval(value)
         elif index == 57:
             UseSubtract = eval(value)
         elif index == 58:
@@ -1508,6 +1517,17 @@ def main():
             SaveMasses = eval(value)
         elif index == 70:
             MassName = value
+            
+        #SAVING DISPLAYED OUTPUTS BEING READ IN
+        
+        elif index == 73:
+            SaveOutputs = value
+        elif index == 74:
+            OutputFormat = value
+        elif index == 75:
+            OutSuffix1 = value
+        elif index == 76:
+            OutSuffix2 = value
         index += 1
     opener.close()
 
@@ -1533,14 +1553,24 @@ def main():
         index+=1;
     opener.close()
     
-    #in case you want to zoom
+    #CHECKING PARAMETER LIMITS**************************************************
+    if (MinMz != None and MaxMz != None and MinMz >= MaxMz):
+        raise ValueError('Window_min must be smaller than Window_max')
+    if (min_mass >= max_mass):
+        raise ValueError('min_mass must be smaller than max_mass')
+    if (min_charge >= max_charge):
+        raise ValueError('min_charge must be smaller than max_charge')
+    if (MinWidth != None and MaxWidth != None and MinWidth >= MaxWidth):
+        raise ValueError('min_width must be smaller than max_width')
+        
+    #for working on specific part of spectrum
     if MinMz != None:
         for i in range(len(mzarray)):
             if mzarray[i] >= MinMz:
                 mzarray = mzarray[i:]
                 intensityarray = intensityarray[i:]
                 break;
-        #if MinMz and MaxMz are too big it doesn't matter-- nothing happens to the arrays
+    #if MinMz and MaxMz are too big it doesn't matter-- nothing happens to the arrays
     if MaxMz != None:
         for i in range(len(mzarray)):
             if mzarray[i] >= MaxMz:
@@ -1971,6 +2001,12 @@ def main():
                 figManager = plt.get_current_fig_manager()
                 figManager.window.showMaximized()
                 figManager.window.raise_()
+            
+            if SaveOutputs:
+                OutputName1 = name.partition('.txt')[0] + "_" + OutSuffix1
+                plt.savefig(OutputName1, format = OutputFormat)
+
+            
             plt.figure()
             
             for i in range(SimulationNumber):
@@ -2015,6 +2051,11 @@ def main():
                 figManager = plt.get_current_fig_manager()
                 figManager.window.showMaximized()        
                 figManager.window.raise_()
+                
+            if SaveOutputs:
+                OutputName2 = name.partition('.txt')[0] + "_" + OutSuffix2
+                plt.savefig(OutputName2, format = OutputFormat)
+            
             plt.show()
             
             t_plot = time.time()
@@ -2086,6 +2127,11 @@ def main():
                     file.write('\n')
                 file.close()
                 print 'Mass information saved to directory ', mass_path  
+            
+            if SaveOutputs:
+                print "Figure with deconvoluted masses saved to directory" + OutputName1
+                print "Figure with fitted spectrum saved to directory" + OutputName2
+                print "Figures saved as ." + OutputFormat, "files\n"
             
             t_write = time.time()
             
