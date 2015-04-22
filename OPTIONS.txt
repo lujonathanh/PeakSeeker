@@ -1,16 +1,16 @@
 directory	./SampleTextFile.txt
 Automatic	1	#1 is Automatic, 0 is Manual Mode, with peak displaying and user approval.
-JustPeaks	1	#Only want peak detection display, enter 1, else 0.
+JustPeaks	0	#Only want peak detection display, enter 1, else 0.
 PeakDispTime	1	# Manual Mode: the time that the tallest peak options are displayed. Don't set to 0.
 ChargeDispTime	3	# Manual Mode: the time that the charge state options are displayed. Don't set to 0.
 AttemptLim	5	# This is how many charge states it will test, and calculate the scoring function for each. AT MOST 6.
 MaxSimulations	3	#The number of masses it will find, maximum. AT MOST 5.
 RepeatSearch	0	#If 1, subtract all the simulations and peaks already found, and repeat deconvolution once.
-BigDisplay	1	# If 1, the plots will be maximized when you display them.
+BigDisplay	0	# If 1, the plots will be maximized when you display them.
 Window_max	None	#the maximum m/z of the spectrum that you want. None is just the max
 Window_min	None	#the minimum m/z of the spectrum that you want. None is just the min.
-max_mass	250000	#Maximum mass allowed.
-min_mass	1	#Minimum mass allowed.
+max_mass	1000000	#Maximum mass allowed.
+min_mass	10000	#Minimum mass allowed.
 max_charge	100	#Maximum charge state allowed.
 min_charge	1	#Minimum charge state allowed.
 max_width	None	#Maximum full-width at half maximum for detected peaks. None is default.
@@ -23,10 +23,10 @@ bkgrd_rmve_win	50	#Size of half of the background remove window. Background is d
 bkgrd_smth_win	100	#Size of half of the window that smooths the background via moving average.
 DoSmooth	0	#NOT RECOMMENDED TO USE. 1 is Smooth with moving average, 0 is none
 smooth_window	3	#NOT RECOMMENDED TO USE. Size of half of the window that smooths the spectrum via moving average.
-DoSavitzky	0	#1 is Smooth with Savitzky-Golay, 0 is None
+DoSavitzky	1	#1 is Smooth with Savitzky-Golay, 0 is None
 savitz_window	5	#Size of half of the Savitzky window
-savitz_order	4	#Order of polynomial to be used
-savitz_times	40	#Number of times to resmooth using the Savitzky-Golay filter.
+savitz_order	2	#Order of polynomial to be used
+savitz_times	10	#Number of times to resmooth using the Savitzky-Golay filter.
 UseProcessed	0	#NOT RECOMMENDED TO USE unless original spectrum is highly noisy. If 1, estimate peak parameters and perform deconvolution on the processed spectrum, not the original spectrum.
 
 --*PEAK DETECTION OPTIONS*--
