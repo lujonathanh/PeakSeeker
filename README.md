@@ -34,12 +34,13 @@ python PeakSeeker.py OPTIONS.txt
   * Change './OPTIONS.txt' to your OPTIONS file path, still in apostrophes
   * Save.
   
-* Open OPTIONS.txt. You may need to use Word for the file to appear in columns.
+* Open OPTIONS.txt in text editor.
     * Change the first line of OPTIONS.txt to the file path of SampleTextFile.txt
       * For other spectra, copy the spectrum from Xcalibur and save in a text file. Change the first line to the new file path.
         * Do NOT remove the header lines; the program will remove these automatically.
     * The first line should look like "directory	(file path of text file)"
-    * Save.
+    * Automatic/Manual mode can be toggled here
+    * The "Just Peaks" option displays a plot of identified peaks in the m/z domain without subsequent processing
 
 * __PeakSeekerClipboard.py__ provides the extra feature of deconvoluting a spectrum straight from clipboard. 
   * You must download the clipboard package.
