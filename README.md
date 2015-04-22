@@ -17,13 +17,17 @@ Installation
   * Download Canopy Express (https://store.enthought.com/downloads/). (HIGHLY RECOMMENDED)
   * Download any of the other options in the Scipy Stack (http://www.scipy.org/install.html).
   * Download plain old Python 2.7 (https://www.python.org/downloads/), and manually install the libraries (http://www.scipy.org/install.html, scroll down to "Individual Binary and Source Packages")
+    * Python libraries can be installed via the pip package manager (HIGHLY RECOMMENDED)
 
 * Download the PeakSeeker package in a zip. Save to a convenient directory.
 
 * Open PeakSeeker.py in a text editor.
   * If using Anaconda, launch Spyder and open PeakSeeker.py.
   * If using Canopy, launch Canopy and open PeakSeeker.py
-  * If using Python, launc your typical code editor.
+  * If using Python from the command line the Options file can be given as an argument:
+```
+python PeakSeeker.py OPTIONS.txt
+```
  
 * Specify the directory path of OPTIONS.txt in the code ofPeakSeeker.py:
   * Control+f "opener = open('./OPTIONS.txt')" This is at line 1378.
