@@ -179,6 +179,9 @@ class Peaks:
         outputs = norm(inputs, self.fit_height, self.fit_center, self.fit_std)
         #print "Inputs are", inputs, "Outputs are", outputs
         return(inputs, outputs)
+    
+    def PrintPeakWidth(self):
+        print "Peak at m/z ", self.fit_center, " has width ", self.fit_std * 2 * 1.1774
         
 class Envelope:
     """The Envelope object is used to find the correct charge state envelope for
@@ -221,6 +224,7 @@ class Envelope:
         global ScoreLimit
         global min_peak_number
         global StdDevStartGuess
+        global AllowMultipleEnvelopes
         
         #the following block of code is to reset values in case we're doing an interative fit
         self.peaks = []
@@ -234,6 +238,7 @@ class Envelope:
         self.curve_std = StdDevStartGuess
         
         
+        #First, find the charge state that finds the most peaks at other charge states
         for z in range(min_charge, max_charge+1):
             if TryCharge == [] or z in TryCharge:
                 if not z in wrong_charges:
@@ -248,7 +253,7 @@ class Envelope:
                             mz = mass/charge_state + 1.00794
                             
                             for i in range(PeakNumber):
-                                in_peak = abs(mz - Peak[i].centroid) < MassTolerance
+                                in_peak = (abs(mz - Peak[i].centroid) < MassTolerance) and (AllowMultipleEnvelopes or (not Peak[i].simulated))
                                 if in_peak:
                                     left_match += 1
                                     break;
@@ -260,7 +265,7 @@ class Envelope:
                             if charge_state < min_charge: break;
                             mz = mass/charge_state + 1.00794
                             for i in range(PeakNumber):
-                                in_peak = abs(mz - Peak[i].centroid) < MassTolerance
+                                in_peak = (abs(mz - Peak[i].centroid) < MassTolerance) and (AllowMultipleEnvelopes or (not Peak[i].simulated))
                                 if in_peak:
                                     right_match += 1
                                     break;
@@ -272,46 +277,62 @@ class Envelope:
                             max_match_left = left_match
                             self.charge = z
 
-    
-        self.mass = self.charge * (self.central_fit_mz - 1.00794) #here mass is calculated from supposed charge state
+        #Set the mass of the envelope given this charge state and mass.
+        self.mass = self.charge * (self.central_fit_mz - 1.00794) 
         self.peak_charges = range(self.charge - max_match_right, self.charge + max_match_left+1)
         
         if len(self.peak_charges)<min_peak_number:
             return(False, ScoreLimit)
         
+        # Simulate the charge envelope, by fitting to the charges and peak heights
         peak_intensities = []
         for z in self.peak_charges:
             indiv_height = []
             mz = self.mass/z + 1.00794
             for i in range(PeakNumber):
+                
                 if abs(mz - Peak[i].centroid) < MassTolerance:
-                    Peak[i].PeakFit(UseDiff, self.number)
-                    #print "Hello", Peak[i].centroid, Peak[i].fit_height
-                    indiv_height.append(Peak[i].fit_height)
-                    #print "Hi", indiv_height
-            #print "yup, charge is", z, "height is", indiv_height, "and mz is", mz
+                    
+                    if (AllowMultipleEnvelopes or (not Peak[i].simulated)):
+                    
+                        Peak[i].PeakFit(UseDiff, self.number)
+                        indiv_height.append(Peak[i].fit_height)
+
+            # If there are multiple peaks at that m/z, average the heights
             peak_intensities.append(sum(indiv_height)/len(indiv_height))
         popt, pcov= curve_fit(norm, np.array(self.peak_charges), np.array(peak_intensities), [self.height, self.charge, self.curve_std])
         
         
         resid = []         #list of the deviations between sim peak and real peak
-        correct_peaks = []
-        for z in self.peak_charges: #THIS PIECE OF CODE CALCULATES ALL DEVIATIONS BETWEEN SIMULATED PEAK AND ACTUAL PEAK
+        correct_peaks = [] #the corresponding raw peak to each simulated peak
+        for z in self.peak_charges:
             peakind = []
             peakstd = []
+            
+            #The simulated peak parameters
             sim_height = norm(z, popt[0], popt[1], popt[2])
             sim_center = self.mass/z +1.00974
             sim_std = self.central_fit_std * self.charge / z
+            
+            #If multiple peaks might match the simulated peak, calculate
+            #the deviation between each and choose the one with least deviation.
             for i in range(PeakNumber):
                 if abs(sim_center - Peak[i].centroid) < MassTolerance:
-                    Peak[i].PeakFit(UseDiff, self.number)
-                    peakind.append(i)
+                    
+                    if (AllowMultipleEnvelopes or (not Peak[i].simulated)):
+                    
+                        Peak[i].PeakFit(UseDiff, self.number)
+                        peakind.append(i)
+        
             for j in range(len(peakind)):
                 peakstd.append(ScoreFunction(sim_center, Peak[peakind[j]].fit_center, sim_height, Peak[peakind[j]].fit_height, sim_std, Peak[peakind[j]].fit_std, False))
 
+            #the deviation for this charge state
             resid.append(min(peakstd))
+            
             correct_peaks.append(peakind[peakstd.index(min(peakstd))])
 
+        #set up the envelope's parameters
         for l in correct_peaks:
             self.peaks.append(l)
             self.peak_heights.append(Peak[l].fit_height)
@@ -320,9 +341,11 @@ class Envelope:
 
             if TryCharge != []: 
                 Peak[l].simulated = True
-                
+        
+            
+        #Re-estimate the mass's value from the found peaks  
         self.mass = 0
-        for i in range(len(self.peaks)): #this allows each m/z peak to inform the estimate of mass's value
+        for i in range(len(self.peaks)): 
             self.mass += self.peak_charges[i]* (self.peak_mz[i]-1.00794)
         self.mass /= len(self.peaks)
 
@@ -343,11 +366,11 @@ class Envelope:
             self.curve_scale = popt[0]
             self.curve_center = popt[1]
             self.curve_std = popt[2]
-
         else:
             self.curve_scale = self.height
             self.curve_center =  sum(self.peak_charges)/len(self.peak_charges) #Averages peak charges if you can't fit a gaussian
             self.curve_std = StdDevStartGuess
+
         total_std = []
         for j in range(len(self.peaks)):
             sim_height = norm(self.peak_charges[j], self.curve_scale, self.curve_center, self.curve_std)
@@ -363,7 +386,6 @@ class Envelope:
     
     def Function(self, x): #outputs the y-value of the peak spectrum given the mz-value
         output = 0
-
         for z in self.peak_charges:
             peaksim_height = norm(z, self.curve_scale, self.curve_center, self.curve_std) #gets peak height on the gaussian fitted to envelope distribution
             output += norm(x, peaksim_height, (self.mass/z) + 1.00794, self.central_fit_std * self.charge / z) #height on this peak
@@ -371,6 +393,7 @@ class Envelope:
         return(output)
     
     def SimulationSetUp(self, Peak, number):
+        global AllowMultipleEnvelopes
         self.number = number
         index = Max_Unsimulated_Index(Peak)
         if index == 0.5 or index == 0:
@@ -379,10 +402,18 @@ class Envelope:
             self.central_peak_index = index #the central index is unsimulated but other peaks in the envelope can have been simulated
             self.center = Peak[self.central_peak_index].centroid
             self.height = Peak[self.central_peak_index].height
+            
+
+            #mark off as simulated no matter what, so that the algorithm can proceed even if this doesn't end up being
+            # the center of this particular charge envelope.
+            if (AllowMultipleEnvelopes):
+                Peak[index].simulated = True
+            
             return True
     
     def CentralPeakFit(self, Peak, UseDiff):
         Peak[self.central_peak_index].PeakFit(UseDiff, self.number)
+       
         self.central_fit_height = Peak[self.central_peak_index].fit_height
         self.central_fit_std = Peak[self.central_peak_index].fit_std
         self.central_fit_mz = Peak[self.central_peak_index].fit_center
@@ -415,9 +446,9 @@ class Envelope:
                 print "corresponding peak mzs are", [round(m, 1) for m in self.peak_mz]
                 print "corresponding peak charges are", self.peak_charges
                 print "score is", round(stddev, 4)
-		if self.peak_mz == [] or self.charge == 0:
-                    print "Error: no more possible charges found."
-                    break;
+                if self.peak_mz == [] or self.charge == 0:
+                        print "Error: no more possible charges found."
+                        break;
                 else:
                     if Automatic:
                         for z in tried_charges:
@@ -425,26 +456,27 @@ class Envelope:
                                 print "charge", self.charge, "is a divisor of earlier charge", z
                                 charge_works = False
                                 break;
-                if charge_works:
-                    stddev = self.CurveFit(Peak)
+                    if charge_works:
+                        stddev = self.CurveFit(Peak)
 
-                else:
-                    stddev = ScoreLimit
-                    print "this charge state fails."
+                    else:
+                        stddev = ScoreLimit
+                        print "this charge state fails."
 
-                scores.append(stddev)
+                    scores.append(stddev)
 
-                wrong_charges.append(self.charge)
-                tried_charges.append(self.charge)
-                sim_peak_mz = [self.mass/z +1.00794 for z in self.peak_charges]
-                possible_peak_mz.append(sim_peak_mz)
-                possible_peak_heights.append([self.Function(i) for i in sim_peak_mz])
+                    wrong_charges.append(self.charge)
+                    tried_charges.append(self.charge)
+                    sim_peak_mz = [self.mass/z +1.00794 for z in self.peak_charges]
+                    possible_peak_mz.append(sim_peak_mz)
+                    possible_peak_heights.append([self.Function(i) for i in sim_peak_mz])
 
-                
-                if len(tried_charges) >= AttemptLimit: #THIS CAN BE CHANGED IF NECESSARY
-                    break;
+
+                    if len(tried_charges) >= AttemptLimit: #THIS CAN BE CHANGED IF NECESSARY
+                        break;
 
             except RuntimeError:
+                #error means doesn't converge when fitting to gaussian. go back and switch the charge state
                 print "RuntimeError for fitting peak", self.center, "to charge", self.charge
                 wrong_charges.append(self.charge)
                 RuntimeErrorCounter +=1
@@ -452,13 +484,15 @@ class Envelope:
                     print "No more possible charges found."
                     break;
         print "\n"
-            #error means doesn't converge when fitting to gaussian. go back and switch the charge state
+
         if Automatic:
             print "for peak", round(self.center), "possible charges are", tried_charges
             print "corresponding masses are", [round((self.center -1.00794)* z) for z in tried_charges]
             print "corresponding scores are", [round(m) for m in scores]
         if len(tried_charges) == 0:
             return False
+        
+        
         if sum(np.array(scores)>=ScoreLimit) >=len(scores): #checks if no correct charge states were found (all would be greater than/equal to ScoreLimit then)
             return False
         else:
@@ -503,7 +537,8 @@ class Envelope:
                 if entry == 'n':
                     return False
                 self.charge = int(entry)
-            
+           
+             
             self.ChargeState(Peak, [], UseDiff, [self.charge])
             self.CurveFit(Peak)
 
@@ -588,7 +623,8 @@ def Max_Unsimulated_Index(Peak): #returns the index of the maximum value not sim
             return(indices[int(entry)-1])
 
 def norm(x, height, center, std):
-  return(height*np.exp(-(x - center)**2/(2*std**2)))
+    return(height*np.exp(-(x - center)**2/(2*std**2)))
+
 
 def Simulate(x, a, b, c, d, e, f, g, h, i, j):#returns y-value of an mz for the combined simulated spectrum
     # global SimulationNumber (is simulation number needed? since all start with curve_scale at 0, it should be fine)
@@ -643,8 +679,14 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
     global res_use_half_left
     global res_use_half_right
     global WeightWidths
+    global ConstrainOverlapFitWidth
+    global ConstrainedWidths
     thresh = DerivThresh # for second derivative. multiply to the median of negative derivatives
     height_fraction = 0.001 # for the peak m/z range. if a data point is below height_fraction * the peak height, then it's not in the peak m/z range
+
+
+
+    #Find the second derivative minima********************************************************
 
     if ysg == None:
         ysg = savitzky_golay(intensity, window_size=5, order=2, deriv = 2)
@@ -688,6 +730,7 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
         inside_peak = False
     
 
+    #Set up parameters if you are fitting a half gaussian at the ends***************************************************
     
     res_use_half_left = use_half_left
     res_use_half_right = use_half_right
@@ -711,6 +754,8 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
         half_gaussian_center_right = None
 
 
+
+    #Calculate the Full Width at Half Maximum of the Peak Range**********************************************************
     b = range(len(mz))
     step1= mz[0]
     step2 = mz[len(mz)-1]
@@ -732,31 +777,57 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
     if len(peakind)  == 1:
         return([mz], [intensity], [indices])
     elif len(peakind) == 2:
-        if WeightWidths:
+        if (ConstrainOverlapFitWidth and len(ConstrainedWidths) >= 2):
+
             h1, h2, m1, m2 = [intensity[peakind[0]], intensity[peakind[1]], mz[peakind[0]], mz[peakind[1]]] #initial guesses
-            sd1, sd2 = np.array([h1, h2]) * sd_guess / sum(np.array([h1, h2]))
+            sd1, sd2 = (ConstrainedWidths[i]/ (2*1.1774) for i in range(2))
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1,  h2, m2 ]
+                    plsq = leastsq(res2constrainedwidth, p, args = (intensity, mz))
+                    h1, m1,  h2, m2  = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1, h2 ]
+                    plsq = leastsq(res2constrainedwidth, p, args = (intensity, mz))
+                    h1, h2  = plsq[0][0], plsq[0][1]
+                elif res_use_half_left:
+                    p = [h1, h2, m2]
+                    plsq = leastsq(res2constrainedwidth, p, args = (intensity, mz))
+                    h1, h2, m2 = plsq[0][0], plsq[0][1], plsq[0][2]
+                elif res_use_half_right:
+                    p = [h1, m1, h2]
+                    plsq = leastsq(res2constrainedwidth, p, args = (intensity, mz))
+                    h1, m1, h2 = plsq[0][0], plsq[0][1], plsq[0][2]
+            except TypeError:
+                pass
+
         else:
-            sd_guess /=2
-            h1, h2, m1, m2, sd1, sd2 = [intensity[peakind[0]], intensity[peakind[1]], mz[peakind[0]], mz[peakind[1]], sd_guess, sd_guess] #initial guesses
-        try:
-            if not (res_use_half_left or res_use_half_right):
-                p = [h1, m1, sd1, h2, m2, sd2]
-                plsq = leastsq(res2, p, args = (intensity, mz))
-                h1, m1, sd1, h2, m2, sd2 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5]
-            elif res_use_half_left and res_use_half_right:
-                p = [h1, sd1, h2, sd2]
-                plsq = leastsq(res2, p, args = (intensity, mz))
-                h1, sd1, h2, sd2 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3]
-            elif res_use_half_left:
-                p = [h1, sd1, h2, m2, sd2]
-                plsq = leastsq(res2, p, args = (intensity, mz))
-                h1, sd1, h2, m2, sd2 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4]
-            elif res_use_half_right:
-                p = [h1, m1, sd1, h2, sd2]
-                plsq = leastsq(res2, p, args = (intensity, mz))
-                h1, m1, sd1, h2, sd2 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4]      
-        except TypeError:
-            pass
+
+            if WeightWidths:
+                h1, h2, m1, m2 = [intensity[peakind[0]], intensity[peakind[1]], mz[peakind[0]], mz[peakind[1]]] #initial guesses
+                sd1, sd2 = np.array([h1, h2]) * sd_guess / sum(np.array([h1, h2]))
+            else:
+                sd_guess /=2
+                h1, h2, m1, m2, sd1, sd2 = [intensity[peakind[0]], intensity[peakind[1]], mz[peakind[0]], mz[peakind[1]], sd_guess, sd_guess] #initial guesses
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1, sd1, h2, m2, sd2]
+                    plsq = leastsq(res2, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, m2, sd2 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1, sd1, h2, sd2]
+                    plsq = leastsq(res2, p, args = (intensity, mz))
+                    h1, sd1, h2, sd2 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3]
+                elif res_use_half_left:
+                    p = [h1, sd1, h2, m2, sd2]
+                    plsq = leastsq(res2, p, args = (intensity, mz))
+                    h1, sd1, h2, m2, sd2 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4]
+                elif res_use_half_right:
+                    p = [h1, m1, sd1, h2, sd2]
+                    plsq = leastsq(res2, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, sd2 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4]
+            except TypeError:
+                pass
         
         returnmz = [] #each element is a list of three elements: list of m/zs, list of intensities, list of indices. remove 0s at end.
         returnintensity = []
@@ -778,31 +849,58 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                     returnindices[j].append(i+indices[0])
       
     elif len(peakind) == 3:
-        if WeightWidths:
+        
+        if (ConstrainOverlapFitWidth and len(ConstrainedWidths) >= 3):
             h1, h2, h3, m1, m2, m3 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]]] #initial guesses
-            sd1, sd2, sd3 = np.array([h1, h2, h3]) * sd_guess / sum(np.array([h1, h2, h3]))
+            sd1, sd2, sd3 = (ConstrainedWidths[i]/ (2*1.1774) for i in range(3))
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1,  h2, m2, h3, m3]
+                    plsq = leastsq(res3constrainedwidth, p, args = (intensity, mz))
+                    h1, m1,  h2, m2, h3, m3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1, h2, m2, h3]
+                    plsq = leastsq(res3constrainedwidth, p, args = (intensity, mz))
+                    h1, h2, m2, h3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3]
+                elif res_use_half_left:
+                    p = [h1, h2, m2, h3, m3]
+                    plsq = leastsq(res3constrainedwidth, p, args = (intensity, mz))
+                    h1, h2, m2, h3, m3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4]
+                elif res_use_half_right:
+                    p = [h1, m1,  h2, m2, h3]
+                    plsq = leastsq(res3constrainedwidth, p, args = (intensity, mz))
+                    h1, m1,  h2, m2, h3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4]
+            except TypeError:
+                pass
+
+
         else:
-            sd_guess/= 3
-            h1, h2, h3, m1, m2, m3, sd1, sd2, sd3 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], sd_guess, sd_guess, sd_guess] #initial guesses
-        try:
-            if not (res_use_half_left or res_use_half_right):
-                p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3]
-                plsq = leastsq(res3, p, args = (intensity, mz))
-                h1, m1, sd1, h2, m2, sd2, h3, m3, sd3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8]
-            elif res_use_half_left and res_use_half_right:
-                p = [h1, sd1, h2, m2, sd2, h3, sd3]
-                plsq = leastsq(res3, p, args = (intensity, mz))
-                h1, sd1, h2, m2, sd2, h3, sd3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6]
-            elif res_use_half_left:
-                p = [h1, sd1, h2, m2, sd2, h3, m3, sd3]
-                plsq = leastsq(res3, p, args = (intensity, mz))
-                h1, sd1, h2, m2, sd2, h3, m3, sd3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7]
-            elif res_use_half_right:
-                p = [h1, m1, sd1, h2, m2, sd2, h3, sd3]
-                plsq = leastsq(res3, p, args = (intensity, mz))
-                h1, m1, sd1, h2, m2, sd2, h3, sd3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7]
-        except TypeError:
-            pass
+            
+            if WeightWidths:
+                h1, h2, h3, m1, m2, m3 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]]] #initial guesses
+                sd1, sd2, sd3 = np.array([h1, h2, h3]) * sd_guess / sum(np.array([h1, h2, h3]))
+            else:
+                sd_guess/= 3
+                h1, h2, h3, m1, m2, m3, sd1, sd2, sd3 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], sd_guess, sd_guess, sd_guess] #initial guesses
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3]
+                    plsq = leastsq(res3, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, m2, sd2, h3, m3, sd3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1, sd1, h2, m2, sd2, h3, sd3]
+                    plsq = leastsq(res3, p, args = (intensity, mz))
+                    h1, sd1, h2, m2, sd2, h3, sd3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6]
+                elif res_use_half_left:
+                    p = [h1, sd1, h2, m2, sd2, h3, m3, sd3]
+                    plsq = leastsq(res3, p, args = (intensity, mz))
+                    h1, sd1, h2, m2, sd2, h3, m3, sd3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7]
+                elif res_use_half_right:
+                    p = [h1, m1, sd1, h2, m2, sd2, h3, sd3]
+                    plsq = leastsq(res3, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, m2, sd2, h3, sd3 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7]
+            except TypeError:
+                pass
         returnmz = [] #each element is a list of three elements: list of m/zs, list of intensities, list of indices. remove 0s at end.
         returnintensity = []
         returnindices = []            
@@ -824,31 +922,56 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                     returnintensity[j].append(intensity[i]*indiv_intensity[j]/sum(indiv_intensity)) #multiply the actual intensity by the ratio
                     returnindices[j].append(i+indices[0])
     elif len(peakind) == 4:
-        if WeightWidths:
+
+        if (ConstrainOverlapFitWidth and len(ConstrainedWidths) >= 4):
             h1, h2, h3, h4, m1, m2, m3, m4= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]] ] #initial guesses
-            sd1, sd2, sd3, sd4 = np.array([h1, h2, h3, h4]) * sd_guess / sum(np.array([h1, h2, h3, h4]))
+            sd1, sd2, sd3, sd4 = (ConstrainedWidths[i]/ (2*1.1774) for i in range(4))
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1,  h2, m2, h3, m3, h4, m4]
+                    plsq = leastsq(res4constrainedwidth, p, args = (intensity, mz))
+                    h1, m1,  h2, m2, h3, m3, h4, m4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1, h2, m2, h3, m3, h4]
+                    plsq = leastsq(res4constrainedwidth, p, args = (intensity, mz))
+                    h1, h2, m2, h3, m3, h4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5]
+                elif res_use_half_left:
+                    p = [h1, h2, m2, h3, m3, h4, m4 ]
+                    plsq = leastsq(res4constrainedwidth, p, args = (intensity, mz))
+                    h1, h2, m2, h3, m3, h4, m4  = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6]
+                elif res_use_half_right:
+                    p = [h1, m1,  h2, m2, h3, m3, h4]
+                    plsq = leastsq(res4constrainedwidth, p, args = (intensity, mz))
+                    h1, m1,  h2, m2, h3, m3, h4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6]
+            except TypeError:
+                pass
+
         else:
-            sd_guess /= 4
-            h1, h2, h3, h4, m1, m2, m3, m4, sd1, sd2, sd3, sd4 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
-        try:
-            if not (res_use_half_left or res_use_half_right):
-                p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4]
-                plsq = leastsq(res4, p, args = (intensity, mz))
-                h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11]
-            elif res_use_half_left and res_use_half_right:
-                p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, sd4]
-                plsq = leastsq(res4, p, args = (intensity, mz))
-                h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, sd4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9]
-            elif res_use_half_left:
-                p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4]
-                plsq = leastsq(res4, p, args = (intensity, mz))
-                h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10]
-            elif res_use_half_right:
-                p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, sd4]
-                plsq = leastsq(res4, p, args = (intensity, mz))
-                h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, sd4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10]
-        except TypeError:
-            pass
+            if WeightWidths:
+                h1, h2, h3, h4, m1, m2, m3, m4= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]] ] #initial guesses
+                sd1, sd2, sd3, sd4 = np.array([h1, h2, h3, h4]) * sd_guess / sum(np.array([h1, h2, h3, h4]))
+            else:
+                sd_guess /= 4
+                h1, h2, h3, h4, m1, m2, m3, m4, sd1, sd2, sd3, sd4 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4]
+                    plsq = leastsq(res4, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, sd4]
+                    plsq = leastsq(res4, p, args = (intensity, mz))
+                    h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, sd4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9]
+                elif res_use_half_left:
+                    p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4]
+                    plsq = leastsq(res4, p, args = (intensity, mz))
+                    h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10]
+                elif res_use_half_right:
+                    p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, sd4]
+                    plsq = leastsq(res4, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, sd4 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10]
+            except TypeError:
+                pass
         
         
         returnmz = [] #each element is a list of three elements: list of m/zs, list of intensities, list of indices. remove 0s at end.
@@ -875,31 +998,55 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                     returnindices[j].append(i+indices[0])
         
     elif len(peakind) == 5:
-        if WeightWidths:
-            h1, h2, h3, h4, h5, m1, m2, m3, m4, m5= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]]] #initial guesses
-            sd1, sd2, sd3, sd4, sd5 = np.array([h1, h2, h3, h4, h5]) * sd_guess / sum(np.array([h1, h2, h3, h4, h5]))
+        if (ConstrainOverlapFitWidth and len(ConstrainedWidths) >= 5):
+            h1, h2, h3, h4, h5, m1, m2, m3, m4, m5 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]]] #initial guesses
+            sd1, sd2, sd3, sd4, sd5 = (ConstrainedWidths[i]/ (2*1.1774) for i in range(5))
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1,  h2, m2, h3, m3, h4, m4, h5, m5]
+                    plsq = leastsq(res5constrainedwidth, p, args = (intensity, mz))
+                    h1, m1,  h2, m2, h3, m3, h4, m4, h5, m5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1,  h2, m2, h3, m3, h4, m4, h5]
+                    plsq = leastsq(res5constrainedwidth, p, args = (intensity, mz))
+                    h1,  h2, m2, h3, m3, h4, m4, h5= plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7]
+                elif res_use_half_left:
+                    p = [h1,  h2, m2, h3, m3, h4, m4, h5, m5]
+                    plsq = leastsq(res5constrainedwidth, p, args = (intensity, mz))
+                    h1,  h2, m2, h3, m3, h4, m4, h5, m5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8]
+                elif res_use_half_right:
+                    p = [h1, m1,  h2, m2, h3, m3, h4, m4, h5]
+                    plsq = leastsq(res5constrainedwidth, p, args = (intensity, mz))
+                    h1, m1,  h2, m2, h3, m3, h4, m4, h5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8]
+            except TypeError:
+                pass
+
         else:
-            sd_guess /= 5
-            h1, h2, h3, h4, h5, m1, m2, m3, m4, m5, sd1, sd2, sd3, sd4, sd5 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
-        try:
-            if not (res_use_half_left or res_use_half_right):
-                p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5]
-                plsq = leastsq(res5, p, args = (intensity, mz))
-                h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14]
-            elif res_use_half_left and res_use_half_right:
-                p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, sd5]
-                plsq = leastsq(res5, p, args = (intensity, mz))
-                h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, sd5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12]
-            elif res_use_half_left:
-                p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5]
-                plsq = leastsq(res5, p, args = (intensity, mz))
-                h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13]
-            elif res_use_half_right:
-                p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, sd5]
-                plsq = leastsq(res5, p, args = (intensity, mz))
-                h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, sd5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13]
-        except TypeError:
-            pass        
+            if WeightWidths:
+                h1, h2, h3, h4, h5, m1, m2, m3, m4, m5= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]]] #initial guesses
+                sd1, sd2, sd3, sd4, sd5 = np.array([h1, h2, h3, h4, h5]) * sd_guess / sum(np.array([h1, h2, h3, h4, h5]))
+            else:
+                sd_guess /= 5
+                h1, h2, h3, h4, h5, m1, m2, m3, m4, m5, sd1, sd2, sd3, sd4, sd5 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5]
+                    plsq = leastsq(res5, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, sd5]
+                    plsq = leastsq(res5, p, args = (intensity, mz))
+                    h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, sd5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12]
+                elif res_use_half_left:
+                    p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5]
+                    plsq = leastsq(res5, p, args = (intensity, mz))
+                    h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13]
+                elif res_use_half_right:
+                    p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, sd5]
+                    plsq = leastsq(res5, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, sd5 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13]
+            except TypeError:
+                pass
 
         
         returnmz = [] #each element is a list of three elements: list of m/zs, list of intensities, list of indices. remove 0s at end.
@@ -928,31 +1075,55 @@ def find_overlaps(mz, intensity, indices, use_half_left, use_half_right, ysg = N
                     returnindices[j].append(i+indices[0])
         
     elif len(peakind) == 6:
-        if WeightWidths:
+        if (ConstrainOverlapFitWidth and len(ConstrainedWidths) >= 6):
             h1, h2, h3, h4, h5, h6, m1, m2, m3, m4, m5, m6= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], intensity[peakind[5]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], mz[peakind[5]]] #initial guesses
-            sd1, sd2, sd3, sd4, sd5, sd6 = np.array([h1, h2, h3, h4, h5, h6]) * sd_guess / sum(np.array([h1, h2, h3, h4, h5, h6]))
+            sd1, sd2, sd3, sd4, sd5, sd6 = (ConstrainedWidths[i]/ (2*1.1774) for i in range(6))
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1,  h2, m2, h3, m3, h4, m4, h5, m5, h6, m6]
+                    plsq = leastsq(res6constrainedwidth, p, args = (intensity, mz))
+                    h1, m1,  h2, m2, h3, m3, h4, m4, h5, m5, h6, m6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1,  h2, m2, h3, m3, h4, m4, h5, m5, h6]
+                    plsq = leastsq(res6constrainedwidth, p, args = (intensity, mz))
+                    h1,  h2, m2, h3, m3, h4, m4, h5, m5, h6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9]
+                elif res_use_half_left:
+                    p = [h1,  h2, m2, h3, m3, h4, m4, h5, m5, h6, m6]
+                    plsq = leastsq(res6constrainedwidth, p, args = (intensity, mz))
+                    h1,  h2, m2, h3, m3, h4, m4, h5, m5, h6, m6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10]
+                elif res_use_half_right:
+                    p = [h1, m1,  h2, m2, h3, m3, h4, m4, h5, m5, h6]
+                    plsq = leastsq(res6constrainedwidth, p, args = (intensity, mz))
+                    h1, m1,  h2, m2, h3, m3, h4, m4, h5, m5, h6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10]
+            except TypeError:
+                pass
+
         else:
-            sd_guess /= 6
-            h1, h2, h3, h4, h5, h6, m1, m2, m3, m4, m5, m6, sd1, sd2, sd3, sd4, sd5, sd6 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], intensity[peakind[5]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], mz[peakind[5]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
-        try:
-            if not (res_use_half_left or res_use_half_right):
-                p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, m6, sd6]
-                plsq = leastsq(res6, p, args = (intensity, mz))
-                h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, m6, sd6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14], plsq[0][15], plsq[0][16], plsq[0][17]
-            elif res_use_half_left and res_use_half_right:
-                p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, sd6]
-                plsq = leastsq(res6, p, args = (intensity, mz))
-                h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, sd6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14], plsq[0][15]
-            elif res_use_half_left:
-                p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, m6, sd6]
-                plsq = leastsq(res6, p, args = (intensity, mz))
-                h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, m6, sd6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14], plsq[0][15], plsq[0][16]
-            elif res_use_half_right:
-                p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, sd6]
-                plsq = leastsq(res6, p, args = (intensity, mz))
-                h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, sd6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14], plsq[0][15], plsq[0][16]
-        except TypeError:
-            pass
+            if WeightWidths:
+                h1, h2, h3, h4, h5, h6, m1, m2, m3, m4, m5, m6= [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], intensity[peakind[5]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], mz[peakind[5]]] #initial guesses
+                sd1, sd2, sd3, sd4, sd5, sd6 = np.array([h1, h2, h3, h4, h5, h6]) * sd_guess / sum(np.array([h1, h2, h3, h4, h5, h6]))
+            else:
+                sd_guess /= 6
+                h1, h2, h3, h4, h5, h6, m1, m2, m3, m4, m5, m6, sd1, sd2, sd3, sd4, sd5, sd6 = [intensity[peakind[0]], intensity[peakind[1]], intensity[peakind[2]],intensity[peakind[3]], intensity[peakind[4]], intensity[peakind[5]], mz[peakind[0]], mz[peakind[1]], mz[peakind[2]], mz[peakind[3]], mz[peakind[4]], mz[peakind[5]], sd_guess, sd_guess, sd_guess, sd_guess, sd_guess, sd_guess] #initial guesses
+            try:
+                if not (res_use_half_left or res_use_half_right):
+                    p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, m6, sd6]
+                    plsq = leastsq(res6, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, m6, sd6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14], plsq[0][15], plsq[0][16], plsq[0][17]
+                elif res_use_half_left and res_use_half_right:
+                    p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, sd6]
+                    plsq = leastsq(res6, p, args = (intensity, mz))
+                    h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, sd6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14], plsq[0][15]
+                elif res_use_half_left:
+                    p = [h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, m6, sd6]
+                    plsq = leastsq(res6, p, args = (intensity, mz))
+                    h1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, m6, sd6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14], plsq[0][15], plsq[0][16]
+                elif res_use_half_right:
+                    p = [h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, sd6]
+                    plsq = leastsq(res6, p, args = (intensity, mz))
+                    h1, m1, sd1, h2, m2, sd2, h3, m3, sd3, h4, m4, sd4, h5, m5, sd5, h6, sd6 = plsq[0][0], plsq[0][1], plsq[0][2], plsq[0][3], plsq[0][4], plsq[0][5], plsq[0][6], plsq[0][7], plsq[0][8], plsq[0][9], plsq[0][10], plsq[0][11], plsq[0][12], plsq[0][13], plsq[0][14], plsq[0][15], plsq[0][16]
+            except TypeError:
+                pass
 
         
         returnmz = [] #each element is a list of three elements: list of m/zs, list of intensities, list of indices. remove 0s at end.
@@ -1247,7 +1418,7 @@ def res3(p, y, x):
     y_fit = norm(x, h1, m1, sd1) + norm(x, h2, m2, sd2) + norm(x, h3, m3, sd3)
     err = y - y_fit
     return err
-  
+
 def res4(p, y, x):
     global half_gaussian_center_left
     global half_gaussian_center_right
@@ -1311,6 +1482,114 @@ def res6(p, y, x):
     err = y - y_fit
     return err
 
+def res2constrainedwidth(p, y, x):
+    global half_gaussian_center_left
+    global half_gaussian_center_right
+    global res_use_half_left
+    global res_use_half_right
+    if not (res_use_half_left or res_use_half_right):
+        h1, m1,  h2, m2 = p
+    elif res_use_half_left and res_use_half_right:
+        h1, h2  = p
+        m1 = half_gaussian_center_left
+        m2 = half_gaussian_center_right
+    elif res_use_half_left:
+        h1, h2, m2  = p
+        m1 = half_gaussian_center_left
+    elif res_use_half_right:
+        h1, m1, h2   = p
+        m2 = half_gaussian_center_right
+    y_fit = norm(x, h1, m1, ConstrainedWidths[0]/(2*1.1774)) + norm(x, h2, m2, ConstrainedWidths[1]/(2*1.1774))
+    err = y - y_fit
+    return err
+
+def res3constrainedwidth(p, y, x):
+    global half_gaussian_center_left
+    global half_gaussian_center_right
+    global res_use_half_left
+    global res_use_half_right
+    if not (res_use_half_left or res_use_half_right):
+        h1, m1,  h2, m2, h3, m3 = p
+    elif res_use_half_left and res_use_half_right:
+        h1, h2, m2, h3  = p
+        m1 = half_gaussian_center_left
+        m3 = half_gaussian_center_right
+    elif res_use_half_left:
+        h1, h2, m2, h3, m3  = p
+        m1 = half_gaussian_center_left
+    elif res_use_half_right:
+        h1, m1,  h2, m2, h3  = p
+        m3 = half_gaussian_center_right
+    y_fit = norm(x, h1, m1, ConstrainedWidths[0]/(2*1.1774)) + norm(x, h2, m2, ConstrainedWidths[1]/(2*1.1774)) + norm(x, h3, m3, ConstrainedWidths[2]/(2*1.1774))
+    err = y - y_fit
+    return err
+
+def res4constrainedwidth(p, y, x):
+    global half_gaussian_center_left
+    global half_gaussian_center_right
+    global res_use_half_left
+    global res_use_half_right
+    if not (res_use_half_left or res_use_half_right):
+        h1, m1,  h2, m2, h3, m3, h4, m4 = p
+    elif res_use_half_left and res_use_half_right:
+        h1, h2, m2, h3, m3, h4 = p
+        m1 = half_gaussian_center_left
+        m4 = half_gaussian_center_right
+    elif res_use_half_left:
+        h1, h2, m2, h3, m3, h4, m4  = p
+        m1 = half_gaussian_center_left
+    elif res_use_half_right:
+        h1, m1,  h2, m2, h3, m3, h4 = p
+        m4 = half_gaussian_center_right
+    y_fit = norm(x, h1, m1, ConstrainedWidths[0]/(2*1.1774)) + norm(x, h2, m2, ConstrainedWidths[1]/(2*1.1774)) + norm(x, h3, m3, ConstrainedWidths[2]/(2*1.1774))\
+            + norm(x, h4, m4, ConstrainedWidths[3]/(2*1.1774))
+    err = y - y_fit
+    return err
+
+def res5constrainedwidth(p, y, x):
+    global half_gaussian_center_left
+    global half_gaussian_center_right
+    global res_use_half_left
+    global res_use_half_right
+    if not (res_use_half_left or res_use_half_right):
+        h1, m1,  h2, m2, h3, m3, h4, m4, h5, m5 = p
+    elif res_use_half_left and res_use_half_right:
+        h1,  h2, m2, h3, m3, h4, m4, h5 = p
+        m1 = half_gaussian_center_left
+        m5 = half_gaussian_center_right
+    elif res_use_half_left:
+        h1,  h2, m2, h3, m3, h4, m4, h5, m5 = p
+        m1 = half_gaussian_center_left
+    elif res_use_half_right:
+        h1, m1,  h2, m2, h3, m3, h4, m4, h5 = p
+        m5 = half_gaussian_center_right
+    y_fit = norm(x, h1, m1, ConstrainedWidths[0]/(2*1.1774)) + norm(x, h2, m2, ConstrainedWidths[1]/(2*1.1774)) + norm(x, h3, m3, ConstrainedWidths[2]/(2*1.1774))\
+            + norm(x, h4, m4, ConstrainedWidths[3]/(2*1.1774)) + norm(x, h5, m5, ConstrainedWidths[4]/(2*1.1774))
+    err = y - y_fit
+    return err
+
+def res6constrainedwidth(p, y, x):
+    global half_gaussian_center_left
+    global half_gaussian_center_right
+    global res_use_half_left
+    global res_use_half_right
+    if not (res_use_half_left or res_use_half_right):
+        h1, m1,  h2, m2, h3, m3, h4, m4, h5, m5, h6, m6 = p
+    elif res_use_half_left and res_use_half_right:
+        h1,  h2, m2, h3, m3, h4, m4, h5, m5, h6 = p
+        m1 = half_gaussian_center_left
+        m6 = half_gaussian_center_right
+    elif res_use_half_left:
+        h1,  h2, m2, h3, m3, h4, m4, h5, m5, h6, m6 = p
+        m1 = half_gaussian_center_left
+    elif res_use_half_right:
+        h1, m1,  h2, m2, h3, m3, h4, m4, h5, m5, h6 = p
+        m6 = half_gaussian_center_right
+    y_fit = norm(x, h1, m1, ConstrainedWidths[0]/(2*1.1774)) + norm(x, h2, m2, ConstrainedWidths[1]/(2*1.1774)) + norm(x, h3, m3, ConstrainedWidths[2]/(2*1.1774))\
+            + norm(x, h4, m4, ConstrainedWidths[3]/(2*1.1774)) + norm(x, h5, m5, ConstrainedWidths[4]/(2*1.1774)) + norm(x, h6, m6, ConstrainedWidths[5]/(2*1.1774))
+    err = y - y_fit
+    return err
+
         
 def MakeFile(file_name, revise_name, beginning, mzarray, DiffSpec): #Writes the subtracted spectrum into another text file.
 	temp_path = file_name.partition('.txt')[0] + '_' + revise_name + '.txt'
@@ -1353,6 +1632,16 @@ def main():
     global DerivThresh
     global NeedZeroCrossing
     global WeightWidths
+
+
+    global ConstrainOverlapFitWidth
+
+    global ConstrainedWidths
+    #The Full widths at half maximum to be used
+
+    global AllowMultipleEnvelopes
+    #Allow Peaks to belong to multiple envelopes
+    
     
     global ColorDict
     ColorDict = dict([(0, 'r'), (1 , 'y'), (2, 'g'), (3, 'c'), (4,'m'), (5, 'b'), (6, 'purple'), (7, 'SaddleBrown'), (8, 'chartreuse'), (9, 'orange') ])
@@ -1380,7 +1669,7 @@ def main():
     if len(sys.argv) > 1:
         OptionsDirectory = sys.argv[1]
     else:
-        OptionsDirectory = '/Users/jlu96/Desktop/Python27/OPTIONS.txt' #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
+        OptionsDirectory = '/Users/jlu96/Dropbox/Python27/OPTIONS.txt' #THIS MUST BE THE DIRECTORY OF THE OPTIONS FILE THAT CAME WITH THE PROGRAM.
     
     print "Opening Options File from:", OptionsDirectory, "\n"
     opener = open(OptionsDirectory)
@@ -1400,134 +1689,147 @@ def main():
         elif index == 4:
             ChargeDisplayTime = eval(value)
         elif index == 5:
-            AttemptLimit = eval(value)
+            AllowMultipleEnvelopes = eval(value)
+
+
+
+
+
         elif index == 6:
-            MaxSimulations = eval(value)
+            AttemptLimit = eval(value)
         elif index == 7:
-            RepeatSearch = eval(value)
+            MaxSimulations = eval(value)
         elif index == 8:
-            BigDisplay = eval(value)
+            RepeatSearch = eval(value)
         elif index == 9:
-            MaxMz = eval(value)
+            BigDisplay = eval(value)
         elif index == 10:
-            MinMz = eval(value)
+            MaxMz = eval(value)
         elif index == 11:
-            max_mass = eval(value)
+            MinMz = eval(value)
         elif index == 12:
-            min_mass = eval(value)
+            max_mass = eval(value)
         elif index == 13:
-            max_charge = eval(value)
+            min_mass = eval(value)
         elif index == 14:
-            min_charge = eval(value)
+            max_charge = eval(value)
         elif index == 15:
-            MaxWidth = eval(value)
+            min_charge = eval(value)
         elif index == 16:
+            MaxWidth = eval(value)
+        elif index == 17:
             MinWidth = eval(value)
 
         #PROCESSING OPTIONS BEING READ IN
         
-        elif index == 20:
-            BkgrdRemove = eval(value)
         elif index == 21:
-            background_remove_window = eval(value)
+            BkgrdRemove = eval(value)
         elif index == 22:
-            background_smooth_window = eval(value)
+            background_remove_window = eval(value)
         elif index == 23:
-            DoSmooth = eval(value)
+            background_smooth_window = eval(value)
         elif index == 24:
-            smooth_window = eval(value)
+            DoSmooth = eval(value)
         elif index == 25:
-            DoSavitzky = eval(value)
+            smooth_window = eval(value)
         elif index == 26:
-            Savitz_Window = eval(value)
+            DoSavitzky = eval(value)
         elif index == 27:
-            Savitz_Order = eval(value)
+            Savitz_Window = eval(value)
         elif index == 28:
-            Savitz_Times = eval(value)
+            Savitz_Order = eval(value)
         elif index == 29:
+            Savitz_Times = eval(value)
+        elif index == 30:
             UseProcessed = eval(value)
         
         #PEAK DETECTION OPTIONS BEING READ IN
             
-        elif index == 33:
-            PeakDetectionType = value
         elif index == 34:
-            threshold = eval(value)
+            PeakDetectionType = value
         elif index == 35:
-            FindOverlaps = eval(value)
+            threshold = eval(value)
         elif index == 36:
-            DerivThresh = eval(value)
+            FindOverlaps = eval(value)
         elif index == 37:
-            NeedZeroCrossing = eval(value)
+            DerivThresh = eval(value)
         elif index == 38:
-            WeightWidths = eval(value)
+            NeedZeroCrossing = eval(value)
         elif index == 39:
-            adj_factor = eval(value)
+            WeightWidths = eval(value)
         elif index == 40:
-            cwt_widths = np.arange(eval(value.partition('-')[0]), eval(value.partition('-')[2].partition(',')[0]), eval(value.partition(',')[2]))
+            ConstrainOverlapFitWidth = eval(value)
         elif index == 41:
-            cwt_wavelet = eval(value) 
+            ConstrainedWidths = [eval(value) for i in range(6)]
+
+
         elif index == 42:
-            cwt_max_distances = eval(value) 
+            adj_factor = eval(value)
         elif index == 43:
-            cwt_gap_thresh = eval(value)  
+            cwt_widths = np.arange(eval(value.partition('-')[0]), eval(value.partition('-')[2].partition(',')[0]), eval(value.partition(',')[2]))
         elif index == 44:
-            cwt_min_length = eval(value)
+            cwt_wavelet = eval(value) 
         elif index == 45:
-            cwt_min_snr = eval(value)
+            cwt_max_distances = eval(value) 
         elif index == 46:
+            cwt_gap_thresh = eval(value)  
+        elif index == 47:
+            cwt_min_length = eval(value)
+        elif index == 48:
+            cwt_min_snr = eval(value)
+        elif index == 49:
             cwt_noise_perc = eval(value)
         
         #CHARGE STATE ASSIGNMENT OPTIONS BEING READ IN
         
-        elif index == 50:
-            MassTolerance = eval(value)
-        elif index == 51:
-            ScoreLimit = eval(value)
-        elif index == 52:
-            MassErrWeight = eval(value)
         elif index == 53:
-            HeightErrWeight = eval(value)
+            MassTolerance = eval(value)
         elif index == 54:
-            StdDevErrWeight = eval(value)
+            ScoreLimit = eval(value)
         elif index == 55:
-            RuntimeErrorLimit = eval(value)
+            MassErrWeight = eval(value)
         elif index == 56:
-            min_peak_number = eval(value)
+            HeightErrWeight = eval(value)
         elif index == 57:
-            UseSubtract = eval(value)
+            StdDevErrWeight = eval(value)
         elif index == 58:
-            SubtractAuto = eval(value)
+            RuntimeErrorLimit = eval(value)
         elif index == 59:
-            NumberRefit = eval(value)
+            min_peak_number = eval(value)
         elif index == 60:
+            UseSubtract = eval(value)
+        elif index == 61:
+            SubtractAuto = eval(value)
+        elif index == 62:
+            NumberRefit = eval(value)
+        elif index == 63:
             StdDevStartGuess = eval(value)    
             
         #SAVING SUBTRACTED SPECTRUM BEING READ IN
         
-        elif index == 64:
+        elif index == 67:
             SaveSubtract = eval(value)
-        elif index == 65:
+        elif index == 68:
             NegToZeros = eval(value)
-        elif index == 66:
+        elif index == 69:
             SubtractName = value
         
         #SAVING MASS INFORMATION BEING READ IN
         
-        elif index == 69:
+        elif index == 72:
             SaveMasses = eval(value)
-        elif index == 70:
+        elif index == 73:
             MassName = value
             
         #SAVING DISPLAYED OUTPUTS BEING READ IN
         
-        elif index == 73:
-            SaveOutputs = value
-        elif index == 74:
-            OutputFormat = value
-        elif index == 75:
-            OutSuffix1 = value
         elif index == 76:
+            SaveOutputs = value
+        elif index == 77:
+            OutputFormat = value
+        elif index == 78:
+            OutSuffix1 = value
+        elif index == 79:
             OutSuffix2 = value
         index += 1
     opener.close()
@@ -1769,7 +2071,7 @@ def main():
                 print "Updated number of peaks is", PeakNumber
             else:
                 i+=1
-        
+
 
     #PEAK HEIGHT, CENTROID, AND WIDTH CALCULATION*******************************
     for i in range(PeakNumber):
@@ -1793,6 +2095,7 @@ def main():
     #CHECK PEAK FITTING*********************************************************
     for i in range(PeakNumber):
         Peak[i].PeakFit(False, 0)
+        # Peak[i].PrintPeakWidth()
     
     t_overlap = time.time()
     
@@ -1894,6 +2197,7 @@ def main():
                         break;
                 Simulation[SimulationNumber].CentralPeakFit(Peak, False)
                 good = Simulation[SimulationNumber].CompleteFit(Peak, False)
+                
                 if not good:
                     Peak[Simulation[SimulationNumber].central_peak_index].simulated = True # DO for the other ones too? and add to the iterative subtracting?
                     Simulation[SimulationNumber]._init_()                                  # Should make these checks uniform
@@ -1910,7 +2214,7 @@ def main():
                 if SimulationNumber >= MaxSimulations: 
                     break;
         
-            print "BEFORE SUBTRACTING AND REFITTING TO ACCOUNT FOR OVERLAPS:\n"
+            print "BEFORE FITTING LINEAR COMBINATION OF ENVELOPES TO SPECTRUM:\n"
             for i in range(SimulationNumber):
                 print "Mass", i+1, "is", Simulation[i].mass, "and abundance is", Simulation[i].abundance
                 print "at center", Simulation[i].center
@@ -2022,12 +2326,22 @@ def main():
                 plt.legend(loc = 'best', frameon = False)        
             plt.xlabel('m/z')
             
+            
+            
+            #Plot the normalized Deconvolved Masses
             ax = plt.subplot(2, 2, 2)
+            #Might want to change the 20000 5/25/15
             x = np.linspace(min([Simulation[i].mass for i in range(SimulationNumber)])-20000, max([Simulation[i].mass for i in range(SimulationNumber)]) + 20000, 1000)
-            mass_intensity = np.zeros(len(x))
+
+            mass_intensity = range(SimulationNumber);
             for i in range(SimulationNumber):
-                mass_intensity += norm(x, Simulation[i].abundance, Simulation[i].mass, Simulation[i].central_fit_std * Simulation[i].charge)
-            plt.plot(x, mass_intensity/max(mass_intensity))
+                mass_intensity[i] = norm(x, Simulation[i].abundance, Simulation[i].mass, Simulation[i].central_fit_std * Simulation[i].charge)
+            for i in range(SimulationNumber):
+                plt.plot(x, mass_intensity[i]/max([Simulation[i].abundance for i in range(SimulationNumber)]), 'k--')
+            plt.plot(x, sum(mass_intensity)/max([Simulation[i].abundance for i in range(SimulationNumber)]))
+
+            
+            
             for i in range(SimulationNumber):
                 plt.text(Simulation[i].mass, Simulation[i].abundance/max([Simulation[j].abundance for j in range(SimulationNumber)]), LetterDict[i]  + str(round(Simulation[i].mass)))
             plt.title("Deconvolved masses")
@@ -2070,7 +2384,8 @@ def main():
                 print "Full width at half maximum of mass peak is", round(Simulation[i].central_fit_std * Simulation[i].charge * 2 * 1.1774, 2)
                 print "Charge center of simulation: ", round(Simulation[i].curve_center, 2)
                 print "Height at this charge center: ", round(Simulation[i].curve_scale, 1)
-                print "Full width at half maximum over charge domain is", round(Simulation[i].curve_std * 2*1.1774, 2)
+                #print "Full width at half maximum over charge domain is", round(Simulation[i].curve_std * 2*1.1774, 2)
+                print "Full width at half maximum over charge domain is", Simulation[i].curve_std * 2*1.1774
                 print "\n"
             print "Total peaks detected:\t", TruePeakNumber        
             
