@@ -3,6 +3,7 @@ Automatic	1	#1 is Automatic, 0 is Manual Mode, with peak displaying and user app
 JustPeaks	0	#Only want peak detection display, enter 1, else 0.
 PeakDispTime	1	# Manual Mode: the time that the tallest peak options are displayed. Don't set to 0.
 ChargeDispTime	3	# Manual Mode: the time that the charge state options are displayed. Don't set to 0.
+MultiEnvelopes	1	# If 1, allow peaks to belong to multiple envelopes.
 AttemptLim	5	# This is how many charge states it will test, and calculate the scoring function for each. AT MOST 6.
 MaxSimulations	3	#The number of masses it will find, maximum. AT MOST 5.
 RepeatSearch	0	#If 1, subtract all the simulations and peaks already found, and repeat deconvolution once.
@@ -23,10 +24,10 @@ bkgrd_rmve_win	50	#Size of half of the background remove window. Background is d
 bkgrd_smth_win	100	#Size of half of the window that smooths the background via moving average.
 DoSmooth	0	#NOT RECOMMENDED TO USE. 1 is Smooth with moving average, 0 is none
 smooth_window	3	#NOT RECOMMENDED TO USE. Size of half of the window that smooths the spectrum via moving average.
-DoSavitzky	1	#1 is Smooth with Savitzky-Golay, 0 is None
+DoSavitzky	0	#1 is Smooth with Savitzky-Golay, 0 is None
 savitz_window	5	#Size of half of the Savitzky window
-savitz_order	2	#Order of polynomial to be used
-savitz_times	10	#Number of times to resmooth using the Savitzky-Golay filter.
+savitz_order	4	#Order of polynomial to be used
+savitz_times	40	#Number of times to resmooth using the Savitzky-Golay filter.
 UseProcessed	0	#NOT RECOMMENDED TO USE unless original spectrum is highly noisy. If 1, estimate peak parameters and perform deconvolution on the processed spectrum, not the original spectrum.
 
 --*PEAK DETECTION OPTIONS*--
@@ -36,7 +37,9 @@ Threshold	0.1	# Fraction of the the highest peak's intensity. Used in intensity 
 FindOverlaps	1	# 1 means use 2nd Derivative to find peaks as local minima and fit multiple Gaussians correspondingly. 0 means No
 DerivThresh	0.3	#for FindOverlaps. A local minimum is only a peak if it is less than DerivThresh * median of negative 2nd Derivatives in range
 NeedCrossing	1	#for FindOverlaps. If 1, local minima only count as peaks if they are separated by a zero-crossing.
-WeightWidths	1	#for FindOverlaps. If 1, when fitting peaks to peak range, weight the starting guesses for peak widths by peak heights. Otherwise, use same starting guess.
+WeightWidths?	0	#for FindOverlaps. If 1, when fitting peaks to peak range, weight the starting guesses for peak widths by peak heights. Otherwise, use same starting guess.
+ForceWidths?	0	#for FindOverlaps. If 1, force the peaks to have width RestrictWidth when fitting to the peak range
+ForcedWidth	7	#for FindOverlaps. The FWHM of peaks to fit to the peak range.
 m_adj_factor	0.7	# PeakFindWay: 'm'. After hitting peak above threshold, the threshold becomes that peak's height times the adjustment factor.
 c_widths	1-6,0.5	# PeakFindWay: 'c'. Range of expected FWHMs of peaks of interest, and the interval of the widths to be searched
 c_wavelet	None	# PeakFindWay: 'c'. None is the ricker wavelet. For other wavelets, see scipy.signal.find_peaks_cwt documentation.
@@ -48,7 +51,7 @@ c_noise_perc	20	# PeakFindWay: 'c'. Percentile of data points below which is con
 
 --*CHARGE STATE ASSIGNMENT OPTIONS*--
 
-MassTolerance	10	#A simulated peak must be within MassTolerance m/z units of a real peak's centroid to be considered within it. 
+MassTolerance	5	#A simulated peak must be within MassTolerance m/z units of a real peak's centroid to be considered within it. 
 ScoreLimit	50000	#If a simulation exceeds this limit in score (i.e. the weighted sum of mass, height, and stddev erro), it is not considered.
 MassErrWeight	50000	# In the scoring function, MassErrWeight is the weight of the m/z % error. It is so big because m/z >>> |m/z0-m/z1|
 HeightErrWeight	500	# In the scoring function, HeightErrWeight is the weight of height % error.
@@ -58,7 +61,7 @@ min_peak_num	3	# Minimum number of peaks to a simulated charge envelope. AT LEAS
 UseSubtract	0	#NOT RECOMMENDED TO USE. If 1, refit the envelope after subtracting all the other ones out, to account for peak overlap, as in Massign.
 SubtractAuto	0	#NOT RECOMMENDED TO USE. Same as Automatic, but with UseSubtract.
 NumberRefit	1	#NOT RECOMMENDED TO USE. How many times you refit using the Subtract.
-StdDev1stGuess	1.1774	#this will be the starting guess of the standard deviation of the charge envelope
+StdDev1stGuess	1	#this will be the starting guess of the standard deviation of the charge envelope
 
 --*SAVING SUBTRACTED SPECTRUM*--
 
@@ -67,7 +70,7 @@ NegToZeros	0	#if saving subtracted file, turn all negative values into just 0s.
 SubtractName	subtract	#Suffix for the subtracted file name
 
 --*SAVING MASS INFORMATION*--
-SaveMasses	0	#If 1, save mass, abundance, and peak info as text file under same directory as original.
+SaveMasses	1	#If 1, save mass, abundance, and peak info as text file under same directory as original.
 MassName	masses	#Suffix for the masses file name
 
 --*SAVING DISPLAYED OUTPUTS*--
