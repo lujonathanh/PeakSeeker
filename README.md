@@ -7,7 +7,8 @@ PeakSeeker is a project created by Jonathan Lu, under the invaluable supervision
 
 How does it work?
 -----------------
-The details of the algorithm will be available in an upcoming paper.
+The details of the algorithm are available can be found in "Improved Peak Detection and Deconvolution of Native Protein Complex Electrospray Mass Spectra". Lu, J., Trnka, M.J., Roh, S., Robinson, P. J. J., Shiau C., Fujimori, D.G.,
+Chiu, W., Burlingame, A. L., Guan, S. Please cite this if you use this software.
 
 Installation
 ------------
