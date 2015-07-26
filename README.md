@@ -10,6 +10,10 @@ How does it work?
 The details of the algorithm are available can be found in "Improved Peak Detection and Deconvolution of Native Protein Complex Electrospray Mass Spectra". Lu, J., Trnka, M.J., Roh, S., Robinson, P. J. J., Shiau C., Fujimori, D.G.,
 Chiu, W., Burlingame, A. L., Guan, S. Please cite this if you use this software.
 
+Support
+-------
+Please visit our Google Group at https://groups.google.com/forum/#!forum/peakseeker for any issues with the software.
+
 Installation
 ------------
 * You must have Python 2.7, scipy, numpy, and matplotlib installed. You can do any one of the following:
